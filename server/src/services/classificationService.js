@@ -1,8 +1,4 @@
-const { Anthropic } = require('@anthropic-ai/sdk');
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const { generateText } = require('./aiProvider');
 
 /**
  * Classifies an IT support ticket using the Anthropic API.
@@ -28,16 +24,11 @@ Ticket Subject: ${subject}
 Ticket Body: ${body}`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: "You are a helpful IT helpdesk assistant. Respond only with JSON.",
-      messages: [
-        { role: 'user', content: prompt }
-      ]
+    const responseText = await generateText({
+      systemPrompt: "You are a helpful IT helpdesk assistant. Respond only with JSON.",
+      userPrompt: prompt,
+      maxTokens: 1024
     });
-
-    const responseText = message.content[0].text;
 
     // Parse the JSON. Attempt to strip markdown formatting if present.
     let jsonString = responseText.trim();
