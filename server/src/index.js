@@ -6,6 +6,9 @@ app.get('/', (req, res) => {
   res.json({ status: "ok" });
 });
 
+const analyticsRouter = require('./routes/analytics');
+app.use('/api/analytics', analyticsRouter);
+
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
