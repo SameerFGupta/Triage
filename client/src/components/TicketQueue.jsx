@@ -298,16 +298,52 @@ export default function TicketQueue() {
                   <div className="detail-section audit-trail">
                     <h4>Audit Trail</h4>
                     <div className="timeline">
-                      {ticketDetails.audit_trail.map(log => (
-                        <div key={log.id} className="timeline-item">
-                          <div className="timeline-time">
-                            {new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {ticketDetails.audit_trail.map(log => {
+                        let summary = '';
+                        const payload = log.payload || {};
+
+                        switch (log.event_type) {
+                          case 'ticket_created':
+                            summary = `Subject: ${payload.subject}`;
+                            break;
+                          case 'ticket_classified':
+                          case 'ai_classified':
+                            summary = `Confidence: ${(payload.confidence * 100).toFixed(0)}%, Assigned to: ${payload.assigned_team}`;
+                            break;
+                          case 'ticket_auto_resolved':
+                          case 'auto_resolved':
+                            summary = 'Response generated';
+                            break;
+                          case 'ticket_manually_resolved':
+                          case 'manually_resolved':
+                            summary = `Status changed from ${payload.previous_status}`;
+                            break;
+                          case 'feedback_received':
+                            summary = `Feedback: ${payload.feedback}`;
+                            break;
+                          case 'sla_breach':
+                          case 'sla_breached':
+                            summary = `Priority: ${payload.priority}, Deadline: ${new Date(payload.deadline).toLocaleString()}`;
+                            break;
+                          case 'escalated':
+                            summary = 'Ticket has been escalated for human review';
+                            break;
+                          default:
+                            summary = '';
+                        }
+
+                        return (
+                          <div key={log.id} className="timeline-item">
+                            <div className="timeline-time">
+                              {new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                            <div className="timeline-content">
+                              <div className="event-type">{log.event_type.replace(/_/g, ' ').toUpperCase()}</div>
+                              {summary && <div className="event-summary">{summary}</div>}
+                            </div>
                           </div>
-                          <div className="timeline-content">
-                            <span className="event-type">{log.event_type.replace(/_/g, ' ').toUpperCase()}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

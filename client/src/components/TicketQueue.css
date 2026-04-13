@@ -317,6 +317,26 @@
   display: flex;
   gap: 12px;
   font-size: 13px;
+  border-left: 2px solid #e5e7eb;
+  padding-left: 16px;
+  margin-left: 8px;
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.timeline-item:last-child {
+  border-left-color: transparent;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #9ca3af;
 }
 
 .timeline-time {
@@ -332,6 +352,12 @@
 .event-type {
   font-weight: 500;
   color: #374151;
+}
+
+.event-summary {
+  color: #6b7280;
+  margin-top: 4px;
+  font-size: 12px;
 }
 
 .loading-spinner {
