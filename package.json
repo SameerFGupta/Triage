@@ -23,5 +23,10 @@
   "homepage": "https://github.com/SameerFGupta/Triage#readme",
   "dependencies": {
     "concurrently": "^9.2.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^4.2.2"
   }
 }
