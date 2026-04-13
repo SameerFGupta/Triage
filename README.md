@@ -1,5 +1,5 @@
 # Triage
-With **Triage**, your team will know what needs immediate attention vs. what can wait.
+**With Triage, your team will know what needs immediate attention vs. what can wait.**
  
 Triage classifies, routes, and resolves support tickets before a human ever has to.
 
