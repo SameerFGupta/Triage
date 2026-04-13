@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const { parse } = require('json2csv');
 
 router.get('/summary', (req, res) => {
   try {
@@ -111,6 +112,19 @@ router.get('/summary', (req, res) => {
   } catch (error) {
     console.error('Error fetching analytics summary:', error);
     res.status(500).json({ error: 'Failed to fetch analytics summary', details: error.message });
+  }
+});
+
+router.get('/export', (req, res) => {
+  try {
+    const tickets = db.prepare('SELECT * FROM tickets ORDER BY created_at DESC').all();
+    const csv = parse(tickets);
+    res.setHeader('Content-Type', 'text/csv');
+    res.attachment('tickets.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting tickets:', error);
+    res.status(500).json({ error: 'Failed to export tickets', details: error.message });
   }
 });
 

@@ -46,9 +46,45 @@ export default function Dashboard() {
   const autoResolvedCount = Math.round(data.resolvedTickets * (data.autoResolutionRate / 100)) || 0;
   const timeSavedMinutes = autoResolvedCount * 8;
 
+  const handleExportCSV = async () => {
+    try {
+      const response = await fetch('/api/analytics/export');
+      if (!response.ok) throw new Error('Failed to export CSV');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tickets.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export CSV.');
+    }
+  };
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', textAlign: 'left' }}>
-      <h2>Analytics Dashboard</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>Analytics Dashboard</h2>
+        <button
+          onClick={handleExportCSV}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: 'var(--accent)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          Export CSV
+        </button>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
