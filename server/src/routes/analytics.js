@@ -107,7 +107,8 @@ router.get('/summary', (req, res) => {
       ticketsByCategory,
       ticketsByTeam,
       ticketsByPriority,
-      last7Days
+      last7Days,
+      activeProvider: process.env.AI_PROVIDER || 'anthropic'
     });
   } catch (error) {
     console.error('Error fetching analytics summary:', error);
