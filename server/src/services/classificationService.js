@@ -18,7 +18,11 @@ Return ONLY a valid JSON object with the following fields:
 - priority: must be one of [low, medium, high, critical]
 - confidence: a float between 0.0 and 1.0 representing your confidence in the classification
 - sentiment: must be one of [frustrated, neutral, urgent, unclear]
-- reasoning: one sentence explaining the classification
+- plain_english_reason: One sentence explaining why the ticket was classified and routed the way it was. This field should be written for a non-technical end user, not a developer.
+  Examples:
+    "Your request mentions a forgotten password, so I've sent you step-by-step reset instructions automatically."
+    "This looks like a network outage affecting multiple users, so I've escalated it to the infrastructure team for urgent review."
+    "I wasn't confident enough in my classification to auto-resolve this, so a human agent will review it shortly."
 
 Ticket Subject: ${subject}
 Ticket Body: ${body}`;
@@ -46,7 +50,7 @@ Ticket Body: ${body}`;
     const classification = JSON.parse(jsonString);
 
     // Validate structure
-    const requiredFields = ['category', 'assigned_team', 'priority', 'confidence', 'sentiment', 'reasoning'];
+    const requiredFields = ['category', 'assigned_team', 'priority', 'confidence', 'sentiment', 'plain_english_reason'];
     for (const field of requiredFields) {
       if (!(field in classification)) {
          throw new Error(`Missing required field in JSON response: ${field}`);
