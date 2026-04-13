@@ -69,7 +69,23 @@ export default function Dashboard() {
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', textAlign: 'left' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0 }}>Analytics Dashboard</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h2 style={{ margin: 0 }}>Analytics Dashboard</h2>
+          {data.activeProvider && (
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '4px 8px',
+                borderRadius: '12px',
+                color: 'white',
+                backgroundColor: data.activeProvider === 'anthropic' ? '#8B5CF6' : '#3B82F6', // purple for anthropic, blue for gemini
+              }}
+            >
+              {data.activeProvider === 'anthropic' ? 'Powered by Claude' : 'Powered by Gemini'}
+            </span>
+          )}
+        </div>
         <button
           onClick={handleExportCSV}
           style={{
