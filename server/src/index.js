@@ -18,6 +18,9 @@ app.use('/api/tickets', ticketsRouter);
 const analyticsRouter = require('./routes/analytics');
 app.use('/api/analytics', analyticsRouter);
 
+const settingsRouter = require('./routes/settings');
+app.use('/api/settings', settingsRouter);
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
