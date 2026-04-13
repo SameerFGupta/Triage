@@ -3,10 +3,11 @@ Know what needs immediate attention vs. what can wait.
  
 AI-powered IT helpdesk automation that classifies, routes, and resolves support tickets before a human ever has to.
 
-Includes:
-Confidence scoring — Claude rates its own classification confidence; low-confidence tickets get flagged for human review rather than auto-routed, showing you understand AI limitations
-SLA tracking — each ticket category gets a target resolution time; the dashboard shows SLA compliance %
-Escalation chains — if an auto-response isn't acknowledged in X minutes, it escalates automatically
-Sentiment analysis — detect frustrated/urgent tone and bump priority, showing emotional intelligence in triage
-Resolution feedback loop — users can thumbs up/down auto-resolutions; this data appears on the dashboard as "AI accuracy rate"
-Audit trail — every AI decision is logged with the exact prompt+response, making it explainable and trustworthy
+### Key Features
+
+* **Confidence Scoring**: Claude rates its own classification confidence; low-confidence tickets are flagged for human review rather than auto-routed to account for AI limitations.
+* **SLA Tracking**: Maps ticket categories to target resolution times, with real-time compliance percentages displayed on the main dashboard.
+* **Escalation Chains**: Implements automated triggers to escalate tickets if an auto-response is not acknowledged within a specified timeframe.
+* **Sentiment Analysis**: Detects frustrated or urgent tones to dynamically bump priority, ensuring emotional intelligence in the triage process.
+* **Resolution Feedback Loop**: Captures user feedback (thumbs up/down) to generate a live "AI Accuracy Rate" for the dashboard.
+* **Audit Trail**: Logs every AI decision with the exact prompt and response pair to ensure the system remains explainable and trustworthy.
