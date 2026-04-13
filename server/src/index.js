@@ -15,6 +15,9 @@ app.get('/', (req, res) => {
 const ticketsRouter = require('./routes/tickets');
 app.use('/api/tickets', ticketsRouter);
 
+const analyticsRouter = require('./routes/analytics');
+app.use('/api/analytics', analyticsRouter);
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
