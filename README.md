@@ -1,7 +1,7 @@
 # Triage
 With **Triage**, your team will know what needs immediate attention vs. what can wait.
  
-AI-powered IT helpdesk automation that classifies, routes, and resolves support tickets before a human ever has to.
+Triage classifies, routes, and resolves support tickets before a human ever has to.
 
 What it Does:
 Accepts mock IT support tickets (via a simple web form or email simulation)
