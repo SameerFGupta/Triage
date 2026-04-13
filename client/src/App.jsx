@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import './App.css'
+import TicketQueue from './components/TicketQueue'
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard')
