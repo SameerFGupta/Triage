@@ -95,7 +95,10 @@ router.get('/summary', (req, res) => {
     `;
     const last7Days = db.prepare(last7DaysQuery).all();
 
+    const activeProvider = process.env.AI_PROVIDER || 'anthropic';
+
     res.json({
+      activeProvider,
       totalTickets: totalTicketsRow.count,
       openTickets: openTicketsRow.count,
       resolvedTickets: resolvedTicketsRow.count,
