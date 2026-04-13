@@ -3,6 +3,13 @@ Know what needs immediate attention vs. what can wait.
  
 AI-powered IT helpdesk automation that classifies, routes, and resolves support tickets before a human ever has to.
 
+What it Does:
+Accepts mock IT support tickets (via a simple web form or email simulation)
+Uses the Claude or OpenAI API to classify them (password reset, VPN issue, hardware request, etc.)
+Auto-responds to simple/common ones with a generated resolution
+Routes complex ones to the right "team" (infrastructure, cybersecurity, etc.) — mirroring the exact sub-teams mentioned in the job description
+Logs everything to a dashboard showing ticket volume, resolution rate, and time saved
+
 ### Key Features
 
 * **Confidence Scoring**: Claude rates its own classification confidence; low-confidence tickets are flagged for human review rather than auto-routed to account for AI limitations.
