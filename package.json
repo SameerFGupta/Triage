@@ -1,0 +1,27 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "Know what needs immediate attention vs. what can wait.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && nodemon src/index.js",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SameerFGupta/Triage.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SameerFGupta/Triage/issues"
+  },
+  "homepage": "https://github.com/SameerFGupta/Triage#readme",
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
