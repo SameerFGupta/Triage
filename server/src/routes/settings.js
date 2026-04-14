@@ -1,8 +1,14 @@
 const express = require('express');
+const { getProviderStatus } = require('../services/aiProvider');
 const router = express.Router();
 
 router.get('/provider', (req, res) => {
   res.json({ provider: process.env.AI_PROVIDER || 'anthropic' });
+});
+
+router.get('/status', (req, res) => {
+  const status = getProviderStatus();
+  res.json(status);
 });
 
 router.post('/provider', (req, res) => {

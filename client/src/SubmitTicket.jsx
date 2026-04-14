@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const SubmitTicket = () => {
   const [email, setEmail] = useState('');
@@ -8,11 +8,31 @@ const SubmitTicket = () => {
   const [result, setResult] = useState(null);
   const [autoResponse, setAutoResponse] = useState('');
   const [error, setError] = useState('');
+  const [configurationHint, setConfigurationHint] = useState('');
+  const [providerStatus, setProviderStatus] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/settings/status')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to load AI provider status.');
+        }
+
+        return response.json();
+      })
+      .then((status) => {
+        setProviderStatus(status);
+      })
+      .catch(() => {
+        setProviderStatus(null);
+      });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setConfigurationHint('');
 
     try {
       const response = await fetch('/api/tickets', {
@@ -28,7 +48,22 @@ const SubmitTicket = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit ticket');
+        let errorMessage = 'Failed to submit ticket';
+        let errorCode = null;
+
+        try {
+          const errorPayload = await response.json();
+          errorMessage = errorPayload.message || errorPayload.error || errorMessage;
+          errorCode = errorPayload.code;
+        } catch {
+          // Ignore invalid error payloads and use the fallback message.
+        }
+
+        if (errorCode === 'AI_NOT_CONFIGURED') {
+          setConfigurationHint('Add the matching API key in the server .env file, then restart the server and try again.');
+        }
+
+        throw new Error(errorMessage);
       }
 
       const ticket = await response.json();
@@ -46,8 +81,8 @@ const SubmitTicket = () => {
 
       setResult(ticket);
       setAutoResponse(autoResText);
-    } catch {
-      setError('An error occurred while submitting your ticket.');
+    } catch (err) {
+      setError(err.message || 'An error occurred while submitting your ticket.');
     } finally {
       setLoading(false);
     }
@@ -119,9 +154,23 @@ const SubmitTicket = () => {
     <div className="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md border border-gray-200 text-left">
       <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Submit a Support Ticket</h2>
 
+      {providerStatus && !providerStatus.configured && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded relative mb-4" role="status">
+          <span className="block sm:inline">
+            AI classification is currently unavailable because the {providerStatus.provider} provider is not configured.
+          </span>
+          <span className="block mt-2 text-sm text-amber-700">
+            Add the matching API key in the server `.env` file and restart the server to enable live classification.
+          </span>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
           <span className="block sm:inline">{error}</span>
+          {configurationHint && (
+            <span className="block mt-2 text-sm text-red-600">{configurationHint}</span>
+          )}
         </div>
       )}
 

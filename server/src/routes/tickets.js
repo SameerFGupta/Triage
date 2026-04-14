@@ -3,6 +3,7 @@ const db = require('../db/db');
 const classificationService = require('../services/classificationService');
 const resolutionService = require('../services/resolutionService');
 const slaService = require('../services/slaService');
+const { AIConfigurationError } = require('../services/aiProvider');
 
 const router = express.Router();
 
@@ -112,6 +113,13 @@ router.post('/', async (req, res, next) => {
 
     res.status(201).json(ticket);
   } catch (err) {
+    if (err instanceof AIConfigurationError) {
+      return res.status(503).json({
+        error: 'AI provider not configured',
+        code: err.code,
+        message: err.message
+      });
+    }
     next(err);
   }
 });

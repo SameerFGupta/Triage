@@ -55,6 +55,10 @@ if (countRow.count === 0) {
       @subject, @body, @submitter_email, @status, @priority, @category, @assigned_team, @sentiment_score, @confidence_score, @sla_deadline
     )
   `);
+  const insertAudit = db.prepare(`
+    INSERT INTO audit_log (ticket_id, event_type, payload)
+    VALUES (@ticket_id, @event_type, @payload)
+  `);
 
   const mockTickets = [
     {
@@ -181,11 +185,110 @@ if (countRow.count === 0) {
 
   const insertMany = db.transaction((tickets) => {
     for (const ticket of tickets) {
-      insertTicket.run(ticket);
+      const info = insertTicket.run(ticket);
+      const ticketId = info.lastInsertRowid;
+
+      insertAudit.run({
+        ticket_id: ticketId,
+        event_type: 'ticket_created',
+        payload: JSON.stringify({
+          subject: ticket.subject,
+          body: ticket.body,
+          submitter_email: ticket.submitter_email
+        })
+      });
+
+      insertAudit.run({
+        ticket_id: ticketId,
+        event_type: 'ticket_classified',
+        payload: JSON.stringify({
+          category: ticket.category,
+          assigned_team: ticket.assigned_team,
+          priority: ticket.priority,
+          confidence: ticket.confidence_score,
+          sentiment: ticket.sentiment_score !== null && ticket.sentiment_score < 0.4 ? 'urgent' : 'neutral',
+          plain_english_reason: getSeedReason(ticket)
+        })
+      });
     }
   });
 
   insertMany(mockTickets);
+}
+
+dedupeClassificationAuditTrail();
+backfillAuditTrail();
+
+function getSeedReason(ticket) {
+  if (ticket.subject === 'Cannot access VPN') {
+    return 'This mentions a VPN sign-in problem after a password reset, so it is routed for network access troubleshooting.';
+  }
+
+  if (ticket.subject === 'URGENT: Production database down') {
+    return 'This describes a live outage affecting customers, so it is treated as critical and escalated immediately.';
+  }
+
+  if (ticket.subject === 'Suspicious email received') {
+    return 'This looks like a possible phishing report, so it is routed to the security team for fast review.';
+  }
+
+  if (ticket.status === 'resolved') {
+    return 'This request matches a common support issue, so the system can classify it confidently and provide a quick response.';
+  }
+
+  return 'The ticket content clearly matches a known IT support category, so it has been routed to the most likely team.';
+}
+
+function backfillAuditTrail() {
+  const ticketsMissingClassificationAudit = db.prepare(`
+    SELECT t.*
+    FROM tickets t
+    LEFT JOIN audit_log a
+      ON a.ticket_id = t.id
+     AND a.event_type = 'ticket_classified'
+    WHERE a.id IS NULL
+  `).all();
+
+  if (ticketsMissingClassificationAudit.length === 0) {
+    return;
+  }
+
+  const insertAudit = db.prepare(`
+    INSERT INTO audit_log (ticket_id, event_type, payload)
+    VALUES (@ticket_id, @event_type, @payload)
+  `);
+
+  const backfill = db.transaction((tickets) => {
+    for (const ticket of tickets) {
+      insertAudit.run({
+        ticket_id: ticket.id,
+        event_type: 'ticket_classified',
+        payload: JSON.stringify({
+          category: ticket.category || 'other',
+          assigned_team: ticket.assigned_team || 'helpdesk',
+          priority: ticket.priority || 'medium',
+          confidence: ticket.confidence_score ?? 0.75,
+          sentiment: ticket.sentiment_score !== null && ticket.sentiment_score < 0.4 ? 'urgent' : 'neutral',
+          plain_english_reason: getSeedReason(ticket)
+        })
+      });
+    }
+  });
+
+  backfill(ticketsMissingClassificationAudit);
+}
+
+function dedupeClassificationAuditTrail() {
+  db.prepare(`
+    DELETE FROM audit_log
+    WHERE event_type = 'ticket_classified'
+      AND id NOT IN (
+        SELECT MIN(id)
+        FROM audit_log
+        WHERE event_type = 'ticket_classified'
+        GROUP BY ticket_id
+      )
+  `).run();
 }
 
 module.exports = db;
