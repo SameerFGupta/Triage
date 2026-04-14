@@ -4,6 +4,7 @@ const classificationService = require('../services/classificationService');
 const resolutionService = require('../services/resolutionService');
 const slaService = require('../services/slaService');
 const { AIConfigurationError } = require('../services/aiProvider');
+const { AIResponseParseError } = require('../services/classificationService');
 
 const router = express.Router();
 
@@ -118,6 +119,13 @@ router.post('/', async (req, res, next) => {
         error: 'AI provider not configured',
         code: err.code,
         message: err.message
+      });
+    }
+    if (err instanceof AIResponseParseError) {
+      return res.status(502).json({
+        error: 'AI provider returned invalid JSON',
+        code: err.code,
+        message: 'The AI classifier returned an invalid response. Please try submitting the ticket again.'
       });
     }
     next(err);

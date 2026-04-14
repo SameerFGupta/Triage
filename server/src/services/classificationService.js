@@ -1,5 +1,95 @@
 const { generateText } = require('./aiProvider');
 
+class AIResponseParseError extends Error {
+  constructor(message, rawResponse) {
+    super(message);
+    this.name = 'AIResponseParseError';
+    this.code = 'AI_INVALID_JSON';
+    this.rawResponse = rawResponse;
+  }
+}
+
+function stripCodeFences(text) {
+  const trimmed = text.trim();
+
+  if (trimmed.startsWith('```json')) {
+    return trimmed.slice(7, trimmed.endsWith('```') ? -3 : undefined).trim();
+  }
+
+  if (trimmed.startsWith('```')) {
+    return trimmed.slice(3, trimmed.endsWith('```') ? -3 : undefined).trim();
+  }
+
+  return trimmed;
+}
+
+function extractFirstJsonObject(text) {
+  const start = text.indexOf('{');
+
+  if (start === -1) {
+    return text;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return text.slice(start);
+}
+
+function parseClassificationResponse(responseText) {
+  const normalized = extractFirstJsonObject(stripCodeFences(responseText));
+
+  try {
+    return JSON.parse(normalized);
+  } catch (error) {
+    console.error('Failed to parse AI classification response:', normalized);
+    throw new AIResponseParseError(
+      'The AI provider returned an invalid classification payload.',
+      normalized
+    );
+  }
+}
+
 /**
  * Classifies an IT support ticket using the Anthropic API.
  * @param {string} subject - The subject of the ticket.
@@ -15,6 +105,10 @@ Return ONLY a valid JSON object with the following fields:
 - confidence: a float between 0.0 and 1.0 representing your confidence in the classification
 - sentiment: must be one of [frustrated, neutral, urgent, unclear]
 - plain_english_reason: One sentence explaining why the ticket was classified and routed the way it was. This field should be written for a non-technical end user, not a developer.
+Important JSON rules:
+- Escape any double quotes inside string values with a backslash.
+- Do not include markdown, commentary, or trailing text before or after the JSON object.
+- Keep all string values on a single line.
   Examples:
     "Your request mentions a forgotten password, so I've sent you step-by-step reset instructions automatically."
     "This looks like a network outage affecting multiple users, so I've escalated it to the infrastructure team for urgent review."
@@ -30,15 +124,7 @@ Ticket Body: ${body}`;
       maxTokens: 1024
     });
 
-    // Parse the JSON. Attempt to strip markdown formatting if present.
-    let jsonString = responseText.trim();
-    if (jsonString.startsWith('\`\`\`json')) {
-      jsonString = jsonString.slice(7, -3).trim();
-    } else if (jsonString.startsWith('\`\`\`')) {
-      jsonString = jsonString.slice(3, -3).trim();
-    }
-
-    const classification = JSON.parse(jsonString);
+    const classification = parseClassificationResponse(responseText);
 
     // Validate structure
     const requiredFields = ['category', 'assigned_team', 'priority', 'confidence', 'sentiment', 'plain_english_reason'];
@@ -60,5 +146,6 @@ Ticket Body: ${body}`;
 }
 
 module.exports = {
+  AIResponseParseError,
   classifyTicket
 };

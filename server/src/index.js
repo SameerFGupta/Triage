@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const { loadEnv } = require('./config/loadEnv');
+const db = require('./db/db');
 
 loadEnv();
 
 const app = express();
+const host = process.env.HOST || '127.0.0.1';
 const port = process.env.PORT || 3000;
 
 app.use(cors());
@@ -29,6 +31,41 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+const server = app.listen(port, host, () => {
+  console.log(`Server listening on http://${host}:${port}`);
 });
+
+server.on('error', (error) => {
+  console.error(`Failed to start server on http://${host}:${port}`, error);
+  process.exit(1);
+});
+
+let isShuttingDown = false;
+
+function shutdown(signal, exitCode = 0) {
+  if (isShuttingDown) {
+    return;
+  }
+
+  isShuttingDown = true;
+  console.log(`Received ${signal}. Shutting down server...`);
+
+  server.close(() => {
+    try {
+      db.close();
+    } catch (error) {
+      console.error('Failed to close database cleanly:', error);
+    }
+
+    if (signal === 'SIGUSR2') {
+      process.kill(process.pid, 'SIGUSR2');
+      return;
+    }
+
+    process.exit(exitCode);
+  });
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGUSR2', () => shutdown('SIGUSR2'));
