@@ -1,2 +1,3 @@
 node_modules/
 triage.db
+.DS_Store
