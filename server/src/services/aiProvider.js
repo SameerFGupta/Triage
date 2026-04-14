@@ -1,4 +1,6 @@
-require('dotenv').config();
+const { loadEnv } = require('../config/loadEnv');
+
+loadEnv();
 
 class AIConfigurationError extends Error {
   constructor(message) {
@@ -30,7 +32,8 @@ function getGeminiClient() {
 
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  return genAI.getGenerativeModel({ model });
 }
 
 function getProviderStatus() {

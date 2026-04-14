@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const SubmitTicket = () => {
+const SubmitTicket = ({ aiProvider }) => {
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -26,7 +26,7 @@ const SubmitTicket = () => {
       .catch(() => {
         setProviderStatus(null);
       });
-  }, []);
+  }, [aiProvider]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,7 +60,7 @@ const SubmitTicket = () => {
         }
 
         if (errorCode === 'AI_NOT_CONFIGURED') {
-          setConfigurationHint('Add the matching API key in the server .env file, then restart the server and try again.');
+          setConfigurationHint('Add the matching API key in server/.env or the project-root .env, then restart the server and try again.');
         }
 
         throw new Error(errorMessage);
@@ -160,7 +160,7 @@ const SubmitTicket = () => {
             AI classification is currently unavailable because the {providerStatus.provider} provider is not configured.
           </span>
           <span className="block mt-2 text-sm text-amber-700">
-            Add the matching API key in the server `.env` file and restart the server to enable live classification.
+            Add the matching API key in `server/.env` or the project-root `.env`, then restart the server to enable live classification.
           </span>
         </div>
       )}

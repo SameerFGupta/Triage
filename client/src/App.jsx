@@ -80,7 +80,7 @@ function App() {
                 How can we help you today?
               </p>
             </div>
-            <SubmitTicket />
+            <SubmitTicket aiProvider={aiProvider} />
           </div>
         )}
         {activeTab === 'Ticket Queue' && <TicketQueue />}

@@ -1,5 +1,6 @@
 const db = require('../src/db/db');
-require('dotenv').config({ path: '../.env' });
+const { loadEnv } = require('../src/config/loadEnv');
+loadEnv();
 const classificationService = require('../src/services/classificationService');
 const resolutionService = require('../src/services/resolutionService');
 const slaService = require('../src/services/slaService');

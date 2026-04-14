@@ -40,6 +40,7 @@ Triage classifies, routes, and resolves support tickets before a human ever has 
    * Gemini:
      * `AI_PROVIDER=gemini`
      * `GEMINI_API_KEY=your_key_here`
+     * Optional: `GEMINI_MODEL=gemini-2.5-flash`
 3. Start the app from the project root with `npm run dev`.
 4. Open the app, submit a new ticket, and then open it in the Ticket Queue to view the AI reasoning and any auto-response.
 
