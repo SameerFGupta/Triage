@@ -16,6 +16,16 @@ Triage classifies, routes, and resolves support tickets before a human ever has 
 
 ---
 
+## Configuration
+
+The application requires a `.env` file at the root level. The following environment variables are supported:
+
+* `AI_PROVIDER`: The AI provider to use. Valid values are `anthropic` or `gemini`. Defaults to `anthropic` if not specified.
+* `ANTHROPIC_API_KEY`: Your Anthropic API key, required if `AI_PROVIDER` is set to `anthropic`.
+* `GEMINI_API_KEY`: Your Google Gemini API key, required if `AI_PROVIDER` is set to `gemini`.
+
+---
+
 ## Key Features
 
 * **Confidence Scoring:** The AI rates its own classification confidence. Low-confidence tickets are flagged for human review rather than auto-routed, accounting for AI limitations.

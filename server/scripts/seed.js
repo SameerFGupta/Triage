@@ -5,6 +5,7 @@ const resolutionService = require('../src/services/resolutionService');
 const slaService = require('../src/services/slaService');
 
 async function main() {
+  console.log(`Using AI provider: ${process.env.AI_PROVIDER || 'anthropic'}`);
   console.log('Seeding database...');
 
   // Clear existing DB tables
