@@ -4,7 +4,7 @@
 
 Triage classifies, routes, and resolves support tickets before a human ever has to.
 
-<img width="1506" height="740" alt="image" src="https://github.com/user-attachments/assets/83472df2-e4de-45e6-a050-e6c805a8eb02" />
+<img width="1512" height="731" alt="image" src="https://github.com/user-attachments/assets/996c9b93-e622-4bbf-8a13-a31e2b88d4ba" />
 
 ---
 
