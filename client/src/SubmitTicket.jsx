@@ -11,6 +11,11 @@ const SubmitTicket = ({ aiProvider }) => {
   const [configurationHint, setConfigurationHint] = useState('');
   const [providerStatus, setProviderStatus] = useState(null);
 
+  // Streaming states
+  const [isClassifying, setIsClassifying] = useState(false);
+  const [streamText, setStreamText] = useState('');
+  const [wsClientId, setWsClientId] = useState(null);
+
   useEffect(() => {
     fetch('/api/settings/status')
       .then((response) => {
@@ -68,22 +73,75 @@ const SubmitTicket = ({ aiProvider }) => {
 
       const ticket = await response.json();
 
-      let autoResText = '';
-      if (ticket.status === 'resolved') {
-        const detailResponse = await fetch(`/api/tickets/${ticket.id}`);
-        if (detailResponse.ok) {
-          const detail = await detailResponse.json();
-          if (detail.responses && detail.responses.length > 0) {
-            autoResText = detail.responses[detail.responses.length - 1].body;
-          }
-        }
-      }
-
+      // Set the initial result so if websocket stream fails, we still show the submitted ticket
       setResult(ticket);
-      setAutoResponse(autoResText);
+
+      // Open WebSocket connection to listen for classification stream and completion
+      // Determine the WebSocket URL dynamically based on current protocol and host
+      // If deployed or configured, you might use an env variable instead, but this matches TicketQueue logic.
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? `${window.location.hostname}:3000`
+        : window.location.host;
+      const ws = new WebSocket(`${wsProtocol}//${wsHost}`);
+
+      ws.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'connection:ack') {
+            setWsClientId(data.payload.clientId);
+            // Subscribe to this ticket's updates
+            ws.send(JSON.stringify({
+              type: 'subscribe:ticket',
+              payload: { ticketId: ticket.id }
+            }));
+
+            // Set initial stream text state
+            setIsClassifying(true);
+            setLoading(false); // Stop normal loading, show streaming UI
+          } else if (data.type === 'ticket:stream:chunk' && data.payload.ticketId === ticket.id) {
+            setStreamText(prev => prev + data.payload.chunk);
+          } else if (data.type === 'ticket:classified' && data.payload.id === ticket.id) {
+            // Update result but wait for potential auto-resolution before finalizing
+            setResult(data.payload);
+          } else if (data.type === 'ticket:auto_resolved' && data.payload.id === ticket.id) {
+            const resolvedTicket = data.payload;
+
+            let autoResText = '';
+            const detailResponse = await fetch(`/api/tickets/${resolvedTicket.id}`);
+            if (detailResponse.ok) {
+              const detail = await detailResponse.json();
+              if (detail.responses && detail.responses.length > 0) {
+                autoResText = detail.responses[detail.responses.length - 1].body;
+              }
+            }
+
+            setResult(resolvedTicket);
+            setAutoResponse(autoResText);
+            setIsClassifying(false);
+            ws.close();
+          } else if (data.type === 'stream:end' && data.payload.ticketId === ticket.id) {
+            // Give auto-resolve a moment to trigger, if it doesn't, finish
+            setTimeout(() => {
+              setIsClassifying(false);
+              ws.close();
+            }, 1000);
+          }
+        } catch (e) {
+          console.error("Error parsing websocket message", e);
+        }
+      };
+
+      ws.onerror = () => {
+        // Fallback to static result if websocket fails
+        setResult(ticket);
+        setLoading(false);
+        setIsClassifying(false);
+      };
+
     } catch (err) {
       setError(err.message || 'An error occurred while submitting your ticket.');
-    } finally {
       setLoading(false);
     }
   };
@@ -95,7 +153,29 @@ const SubmitTicket = ({ aiProvider }) => {
     critical: 'bg-red-100 text-red-800'
   };
 
-  if (result) {
+  if (isClassifying) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md border border-gray-200 text-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Analyzing Your Ticket...</h2>
+        <div className="flex justify-center items-center mb-6">
+          <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded p-4 text-left min-h-[100px] overflow-auto">
+          <p className="text-gray-700 font-mono text-sm whitespace-pre-wrap">
+            <span className="text-indigo-600 font-semibold mb-2 block">AI is thinking...</span>
+            {streamText || "Connecting to AI..."}
+            <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse"></span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (result && !isClassifying) {
     return (
       <div className="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md border border-gray-200">
         <div className="text-center mb-6">
@@ -104,7 +184,7 @@ const SubmitTicket = ({ aiProvider }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">Ticket Submitted</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Ticket Submitted & Analyzed</h2>
           <p className="text-gray-600 mt-2">Ticket ID: #{result.id}</p>
         </div>
 
@@ -120,7 +200,7 @@ const SubmitTicket = ({ aiProvider }) => {
 
           {result.status === 'resolved' ? (
             <div className="bg-green-50 border border-green-200 p-4 rounded text-left">
-              <h3 className="font-semibold text-green-800 mb-2">Auto-Resolved</h3>
+              <h3 className="font-semibold text-green-800 mb-2">Auto-Resolved by AI</h3>
               <p className="text-green-700">{autoResponse || 'Your issue has been automatically resolved.'}</p>
             </div>
           ) : (
@@ -140,6 +220,7 @@ const SubmitTicket = ({ aiProvider }) => {
               setEmail('');
               setSubject('');
               setDescription('');
+              setStreamText('');
             }}
             className="text-indigo-600 hover:text-indigo-800 font-medium"
           >

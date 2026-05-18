@@ -44,14 +44,18 @@ router.post('/', async (req, res, next) => {
     let ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
     wsService.broadcast('ticket:created', ticket);
 
-    // 3. Classify the ticket with streaming
-    wsService.broadcast('stream:start', { ticketId });
+    // Return early to allow the client to subscribe to the WebSocket stream
+    res.status(201).json(ticket);
 
-    const classification = await classificationService.classifyTicket(subject, body, (chunk) => {
-      wsService.streamToTicketSubscribers(ticketId, chunk);
-    });
+    // Background processing
+    (async () => {
+      try {
+        // 3. Classify the ticket with streaming
+        wsService.broadcast('stream:start', { ticketId });
 
-    wsService.broadcast('stream:end', { ticketId });
+        const classification = await classificationService.classifyTicket(subject, body, (chunk) => {
+          wsService.streamToTicketSubscribers(ticketId, chunk);
+        });
 
     // 4. Determine SLA deadline
     const sla_deadline = slaService.getSlaDeadline(classification.priority, classification.category);
@@ -136,22 +140,13 @@ router.post('/', async (req, res, next) => {
       }
     }
 
-    res.status(201).json(ticket);
+        wsService.broadcast('stream:end', { ticketId });
+      } catch (err) {
+        console.error('Error during background ticket classification:', err);
+        wsService.broadcast('stream:end', { ticketId });
+      }
+    })();
   } catch (err) {
-    if (err instanceof AIConfigurationError) {
-      return res.status(503).json({
-        error: 'AI provider not configured',
-        code: err.code,
-        message: err.message
-      });
-    }
-    if (err instanceof AIResponseParseError) {
-      return res.status(502).json({
-        error: 'AI provider returned invalid JSON',
-        code: err.code,
-        message: 'The AI classifier returned an invalid response. Please try submitting the ticket again.'
-      });
-    }
     next(err);
   }
 });
