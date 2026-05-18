@@ -245,12 +245,6 @@ const SubmitTicket = ({ aiProvider }) => {
             <strong>{status}</strong>
           </div>
         </div>
-
-        <ul className="submit-sidecard-list">
-          <li>Use a concrete subject line instead of “Help” or “Issue”.</li>
-          <li>Include what changed, who is blocked, and what you already tried.</li>
-          <li>Longer context helps the triage model route with fewer corrections.</li>
-        </ul>
       </aside>
 
       <article className="submit-panel">

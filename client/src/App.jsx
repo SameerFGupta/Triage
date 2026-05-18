@@ -96,13 +96,6 @@ function App() {
         <main className="app-main">
           {activeTab === 'Submit Ticket' && (
             <div className="page-frame">
-              <section className="page-hero">
-                <div className="page-kicker">Support intake</div>
-                <h1>Triage that feels calm, fast, and accountable.</h1>
-                <p>
-                  Capture the issue once, route it intelligently, and keep the handoff clear for both the requester and the team picking it up.
-                </p>
-              </section>
               <SubmitTicket aiProvider={aiProvider} />
             </div>
           )}
