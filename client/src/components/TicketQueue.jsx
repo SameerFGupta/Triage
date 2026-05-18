@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow, parseISO, isPast, isBefore } from 'date-fns';
 import { ChevronUp, ChevronDown, CheckCircle, XCircle, Clock, AlertTriangle, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import './TicketQueue.css';
+import useWebSocket from '../services/useWebSocket';
 
 export default function TicketQueue() {
   const [tickets, setTickets] = useState([]);
@@ -16,14 +17,18 @@ export default function TicketQueue() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
 
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.port === '5173' ? 'localhost:3000' : window.location.host;
+  const { lastMessage } = useWebSocket(`${wsProtocol}//${wsHost}`);
+
   useEffect(() => {
     fetchTickets();
+  }, []);
 
-    const ws = new WebSocket('ws://localhost:3000');
-
-    ws.onmessage = (event) => {
+  useEffect(() => {
+    if (lastMessage) {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(lastMessage.data);
         if (data.type === 'connection:ack') {
           setWsClientId(data.payload.clientId);
         } else if (
@@ -50,12 +55,8 @@ export default function TicketQueue() {
       } catch (err) {
         console.error('Error parsing WebSocket message:', err);
       }
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+    }
+  }, [lastMessage]);
 
   useEffect(() => {
     if (selectedTicketId) {
