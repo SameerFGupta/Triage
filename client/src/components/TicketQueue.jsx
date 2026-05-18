@@ -191,7 +191,6 @@ export default function TicketQueue() {
       <section className="queue-shell">
         <header className="queue-hero">
           <div>
-            <div className="eyebrow">Operations queue</div>
             <h2>See what needs action and why.</h2>
             <p className="queue-hero-copy">
               Review incoming work, spot risk early, and open any ticket for routing context, audit history, and AI response feedback.

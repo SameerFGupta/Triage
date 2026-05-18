@@ -16,6 +16,49 @@ import {
 
 const COLORS = ['#155dfc', '#0f9f8f', '#f59e0b', '#ef7d31', '#7c6ee6', '#6abf85'];
 
+function formatDisplayLabel(value) {
+  if (!value) return 'Unassigned';
+
+  return value
+    .toString()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function truncateLabel(value, maxLength = 16) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function buildIntegerTicks(maxValue) {
+  const upperBound = Math.max(1, Math.ceil(maxValue || 0));
+  return Array.from({ length: upperBound + 1 }, (_, index) => index);
+}
+
+function CategoryAxisTick({ x, y, payload }) {
+  const label = payload?.value || '';
+  const truncated = truncateLabel(label);
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <title>{label}</title>
+      <text
+        x={0}
+        y={0}
+        dy={16}
+        textAnchor="end"
+        fill="#6f7c87"
+        fontSize={12}
+        transform="rotate(-45)"
+      >
+        {truncated}
+      </text>
+    </g>
+  );
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +103,17 @@ export default function Dashboard() {
   const autoResolvedCount = Math.round(data.resolvedTickets * (data.autoResolutionRate / 100)) || 0;
   const timeSavedMinutes = autoResolvedCount * 8;
   const timeSavedHours = timeSavedMinutes > 0 ? (timeSavedMinutes / 60).toFixed(1) : '0.0';
-  const providerLabel = data.activeProvider === 'anthropic' ? 'Anthropic' : 'Gemini';
+  const categoryChartData = data.ticketsByCategory.map((entry) => ({
+    ...entry,
+    category: formatDisplayLabel(entry.category)
+  }));
+  const teamChartData = data.ticketsByTeam.map((entry) => ({
+    ...entry,
+    team: formatDisplayLabel(entry.team)
+  }));
+  const categoryTicks = buildIntegerTicks(Math.max(...categoryChartData.map((entry) => entry.count), 0));
+  const totalTeamTickets = teamChartData.reduce((sum, entry) => sum + entry.count, 0) || 1;
+  const isTimeSavedEmpty = timeSavedMinutes === 0;
 
   const handleExportCSV = async () => {
     try {
@@ -87,7 +140,6 @@ export default function Dashboard() {
       <section className="dashboard">
         <header className="dashboard-header">
           <div className="dashboard-header-copy">
-            <div className="eyebrow">Operations analytics</div>
             <h2>Support performance, without the noise.</h2>
             <p className="dashboard-summary">
               A clear read on incoming volume, resolution quality, and where automation is actually earning back time.
@@ -95,7 +147,6 @@ export default function Dashboard() {
           </div>
 
           <div className="dashboard-toolbar">
-            {data.activeProvider && <span className="provider-chip">AI model: {providerLabel}</span>}
             <button onClick={handleExportCSV} className="button-secondary">
               Export CSV
             </button>
@@ -103,17 +154,16 @@ export default function Dashboard() {
         </header>
 
         <section className="dashboard-overview">
-          <article className="hero-panel">
+          <article className={`hero-panel ${isTimeSavedEmpty ? 'hero-panel-empty' : ''}`}>
             <div className="hero-meta">
               <span className="stat-dot" />
               <span className="hero-label">Time saved estimate</span>
             </div>
             <p className="hero-value">{timeSavedMinutes}m</p>
             <p className="hero-footnote">
-              Roughly {timeSavedHours} hours returned through {autoResolvedCount} AI-resolved tickets.
-            </p>
-            <p className="hero-supporting">
-              Estimate uses 8 minutes recovered per auto-resolved request.
+              {isTimeSavedEmpty
+                ? 'Automation wins will appear here as AI-resolved tickets start closing on their own.'
+                : `Roughly ${timeSavedHours} hours returned through ${autoResolvedCount} AI-resolved tickets.`}
             </p>
           </article>
 
@@ -152,11 +202,18 @@ export default function Dashboard() {
             </div>
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.ticketsByCategory}>
+                <BarChart data={categoryChartData} margin={{ top: 8, right: 8, left: -18, bottom: 24 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(111, 124, 135, 0.18)" vertical={false} />
-                  <XAxis dataKey="category" tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <Tooltip />
+                  <XAxis dataKey="category" axisLine={false} tickLine={false} interval={0} height={72} tick={<CategoryAxisTick />} />
+                  <YAxis
+                    tick={{ fill: '#6f7c87', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    domain={[0, categoryTicks[categoryTicks.length - 1]]}
+                    ticks={categoryTicks}
+                  />
+                  <Tooltip formatter={(value) => [value, 'Tickets']} labelFormatter={(label) => label} />
                   <Bar dataKey="count" fill="#155dfc" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -171,26 +228,48 @@ export default function Dashboard() {
               </div>
               <span className="muted-chip">{data.ticketsByTeam.length} teams</span>
             </div>
-            <div className="chart-wrap">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.ticketsByTeam}
-                    innerRadius={66}
-                    outerRadius={96}
-                    paddingAngle={3}
-                    dataKey="count"
-                    nameKey="team"
-                    label={({ team, percent }) => `${team} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {data.ticketsByTeam.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="chart-wrap chart-wrap-team">
+              <div className="team-chart-panel">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={teamChartData}
+                      innerRadius={66}
+                      outerRadius={96}
+                      cx="50%"
+                      cy="50%"
+                      paddingAngle={3}
+                      dataKey="count"
+                      nameKey="team"
+                      isAnimationActive={false}
+                    >
+                      {teamChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, 'Tickets']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ul className="chart-legend" aria-label="Tickets by team legend">
+                {teamChartData.map((entry, index) => {
+                  const percent = Math.round((entry.count / totalTeamTickets) * 100);
+
+                  return (
+                    <li key={entry.team} className="chart-legend-item">
+                      <span className="chart-legend-label">
+                        <span
+                          className="chart-legend-swatch"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          aria-hidden="true"
+                        />
+                        {entry.team}
+                      </span>
+                      <span className="chart-legend-value">{percent}%</span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </article>
 

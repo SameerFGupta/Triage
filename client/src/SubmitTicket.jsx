@@ -229,7 +229,6 @@ const SubmitTicket = ({ aiProvider }) => {
   return (
     <section className="submit-layout">
       <aside className="submit-sidecard">
-        <div className="eyebrow">Intake design</div>
         <h2>Make the first handoff the cleanest one.</h2>
         <p>
           Good support tooling reduces back-and-forth before it starts. Capture the issue clearly, then let routing and urgency happen in the background.
@@ -250,7 +249,6 @@ const SubmitTicket = ({ aiProvider }) => {
       <article className="submit-panel">
         <div className="submit-panel-header">
           <div>
-            <div className="eyebrow">Support request</div>
             <h2>Submit a ticket</h2>
             <p className="submit-panel-copy">
               Capture enough detail for routing, escalation, and a fast first response.
