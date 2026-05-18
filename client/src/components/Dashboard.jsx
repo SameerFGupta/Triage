@@ -14,7 +14,7 @@ import {
   Line
 } from 'recharts';
 
-const COLORS = ['#155dfc', '#0f9f8f', '#f59e0b', '#ef7d31', '#7c6ee6', '#6abf85'];
+const COLORS = ['#4f6ef7', '#0f9f8f', '#f59e0b', '#ef7d31', '#8b9ff9', '#6abf85'];
 
 function formatDisplayLabel(value) {
   if (!value) return 'Unassigned';
@@ -27,11 +27,6 @@ function formatDisplayLabel(value) {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-function truncateLabel(value, maxLength = 16) {
-  if (value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength - 3)}...`;
-}
-
 function buildIntegerTicks(maxValue) {
   const upperBound = Math.max(1, Math.ceil(maxValue || 0));
   return Array.from({ length: upperBound + 1 }, (_, index) => index);
@@ -39,7 +34,6 @@ function buildIntegerTicks(maxValue) {
 
 function CategoryAxisTick({ x, y, payload }) {
   const label = payload?.value || '';
-  const truncated = truncateLabel(label);
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -47,13 +41,13 @@ function CategoryAxisTick({ x, y, payload }) {
       <text
         x={0}
         y={0}
-        dy={16}
+        dy={12}
         textAnchor="end"
-        fill="#6f7c87"
-        fontSize={12}
+        fill="#64748b"
+        fontSize={11}
         transform="rotate(-45)"
       >
-        {truncated}
+        {label}
       </text>
     </g>
   );
@@ -102,7 +96,6 @@ export default function Dashboard() {
 
   const autoResolvedCount = Math.round(data.resolvedTickets * (data.autoResolutionRate / 100)) || 0;
   const timeSavedMinutes = autoResolvedCount * 8;
-  const timeSavedHours = timeSavedMinutes > 0 ? (timeSavedMinutes / 60).toFixed(1) : '0.0';
   const categoryChartData = data.ticketsByCategory.map((entry) => ({
     ...entry,
     category: formatDisplayLabel(entry.category)
@@ -113,8 +106,6 @@ export default function Dashboard() {
   }));
   const categoryTicks = buildIntegerTicks(Math.max(...categoryChartData.map((entry) => entry.count), 0));
   const totalTeamTickets = teamChartData.reduce((sum, entry) => sum + entry.count, 0) || 1;
-  const isTimeSavedEmpty = timeSavedMinutes === 0;
-
   const handleExportCSV = async () => {
     try {
       const response = await fetch('/api/analytics/export');
@@ -140,54 +131,39 @@ export default function Dashboard() {
       <section className="dashboard">
         <header className="dashboard-header">
           <div className="dashboard-header-copy">
-            <h2>Support performance, without the noise.</h2>
+            <h2>Dashboard</h2>
             <p className="dashboard-summary">
-              A clear read on incoming volume, resolution quality, and where automation is actually earning back time.
+              Incoming volume, resolution quality, and automation impact at a glance.
             </p>
-          </div>
-
-          <div className="dashboard-toolbar">
-            <button onClick={handleExportCSV} className="button-secondary">
-              Export CSV
-            </button>
           </div>
         </header>
 
         <section className="dashboard-overview">
-          <article className={`hero-panel ${isTimeSavedEmpty ? 'hero-panel-empty' : ''}`}>
-            <div className="hero-meta">
-              <span className="stat-dot" />
-              <span className="hero-label">Time saved estimate</span>
-            </div>
-            <p className="hero-value">{timeSavedMinutes}m</p>
-            <p className="hero-footnote">
-              {isTimeSavedEmpty
-                ? 'Automation wins will appear here as AI-resolved tickets start closing on their own.'
-                : `Roughly ${timeSavedHours} hours returned through ${autoResolvedCount} AI-resolved tickets.`}
-            </p>
+          <article className="metric-card metric-card-featured" style={{ '--i': 0 }}>
+            <span className="metric-label">Time saved</span>
+            <p className="metric-value metric-value-featured">{timeSavedMinutes}m</p>
           </article>
 
-          <div className="metric-grid">
-            <article className="metric-card">
-              <span className="metric-label">Total tickets</span>
-              <p className="metric-value">{data.totalTickets}</p>
-              <p className="metric-caption">Current sample in the analytics window.</p>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">Auto-resolution</span>
-              <p className="metric-value">{data.autoResolutionRate.toFixed(1)}%</p>
-              <p className="metric-caption">Tickets closed without a manual handoff.</p>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">AI accuracy</span>
-              <p className="metric-value">{data.aiAccuracyRate.toFixed(1)}%</p>
-              <p className="metric-caption">Classification decisions matching final outcomes.</p>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">SLA compliance</span>
-              <p className="metric-value">{data.slaComplianceRate.toFixed(1)}%</p>
-              <p className="metric-caption">Tickets still landing inside service expectations.</p>
-            </article>
+          <article className="metric-card" style={{ '--i': 1 }}>
+            <span className="metric-label">Total tickets</span>
+            <p className="metric-value">{data.totalTickets}</p>
+          </article>
+          <article className="metric-card" style={{ '--i': 2 }}>
+            <span className="metric-label">Auto-resolution</span>
+            <p className="metric-value">{data.autoResolutionRate.toFixed(1)}%</p>
+          </article>
+          <article className="metric-card" style={{ '--i': 3 }}>
+            <span className="metric-label">AI accuracy</span>
+            <p className="metric-value">{data.aiAccuracyRate.toFixed(1)}%</p>
+          </article>
+          <article className="metric-card" style={{ '--i': 4 }}>
+            <span className="metric-label">SLA compliance</span>
+            <p className="metric-value">{data.slaComplianceRate.toFixed(1)}%</p>
+          </article>
+          <div className="dashboard-overview-action">
+            <button onClick={handleExportCSV} className="button-secondary">
+              Export CSV
+            </button>
           </div>
         </section>
 
@@ -202,11 +178,11 @@ export default function Dashboard() {
             </div>
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryChartData} margin={{ top: 8, right: 8, left: -18, bottom: 24 }}>
+                <BarChart data={categoryChartData} margin={{ top: 8, right: 8, left: -18, bottom: 44 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(111, 124, 135, 0.18)" vertical={false} />
-                  <XAxis dataKey="category" axisLine={false} tickLine={false} interval={0} height={72} tick={<CategoryAxisTick />} />
+                  <XAxis dataKey="category" axisLine={false} tickLine={false} interval={0} height={96} tick={<CategoryAxisTick />} />
                   <YAxis
-                    tick={{ fill: '#6f7c87', fontSize: 12 }}
+                    tick={{ fill: '#64748b', fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
                     allowDecimals={false}
@@ -214,13 +190,13 @@ export default function Dashboard() {
                     ticks={categoryTicks}
                   />
                   <Tooltip formatter={(value) => [value, 'Tickets']} labelFormatter={(label) => label} />
-                  <Bar dataKey="count" fill="#155dfc" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="count" fill="#4f6ef7" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </article>
 
-          <article className="chart-card">
+          <article className="chart-card team-chart-card">
             <div className="chart-card-header">
               <div>
                 <h3>Tickets by team</h3>
@@ -234,8 +210,8 @@ export default function Dashboard() {
                   <PieChart>
                     <Pie
                       data={teamChartData}
-                      innerRadius={66}
-                      outerRadius={96}
+                      innerRadius={42}
+                      outerRadius={62}
                       cx="50%"
                       cy="50%"
                       paddingAngle={3}
@@ -285,10 +261,10 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.last7Days}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(111, 124, 135, 0.18)" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#155dfc" strokeWidth={3} dot={{ r: 4, fill: '#155dfc' }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="count" stroke="#4f6ef7" strokeWidth={3} dot={{ r: 4, fill: '#4f6ef7' }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

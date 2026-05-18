@@ -3,21 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --text: #4f5b66;
-  --text-soft: #6f7c87;
-  --text-h: #17212b;
-  --bg: #f7f4ee;
-  --surface: rgba(255, 255, 255, 0.82);
-  --border: rgba(124, 141, 160, 0.2);
-  --border-strong: rgba(94, 112, 132, 0.28);
-  --code-bg: #edf1f5;
-  --accent: #155dfc;
-  --accent-strong: #0f3ea8;
-  --accent-bg: rgba(21, 93, 252, 0.08);
-  --accent-border: rgba(21, 93, 252, 0.22);
-  --social-bg: rgba(255, 255, 255, 0.55);
+  --text: #94a3b8;
+  --text-soft: #64748b;
+  --text-h: #f0f4ff;
+  --bg: #0d0f14;
+  --surface: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --code-bg: rgba(148, 163, 184, 0.12);
+  --accent: #4f6ef7;
+  --accent-strong: #8b9ff9;
+  --accent-bg: rgba(79, 110, 247, 0.12);
+  --accent-border: rgba(79, 110, 247, 0.3);
+  --social-bg: rgba(255, 255, 255, 0.08);
   --shadow:
-    rgba(15, 23, 42, 0.08) 0 18px 40px, rgba(15, 23, 42, 0.03) 0 2px 8px;
+    rgba(2, 6, 23, 0.48) 0 24px 60px, rgba(2, 6, 23, 0.28) 0 4px 18px;
 
   --sans: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
   --heading: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', serif;
@@ -41,8 +41,8 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at top left, rgba(21, 93, 252, 0.08), transparent 28%),
-    linear-gradient(180deg, #fbf9f4 0%, #f3efe7 100%);
+    radial-gradient(ellipse at top left, #1a1f3a 0%, #0d0f14 60%);
+  color: var(--text);
 }
 
 #root {
@@ -64,9 +64,10 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(2.8rem, 5vw, 4.4rem);
+  font-size: clamp(3.2rem, 5.5vw, 5rem);
   line-height: 0.98;
   letter-spacing: -0.04em;
+  font-style: italic;
   margin: 0 0 1rem;
   @media (max-width: 1024px) {
     font-size: 36px;
