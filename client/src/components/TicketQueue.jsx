@@ -156,6 +156,16 @@ export default function TicketQueue() {
     }
   };
 
+  const formatSnakeCaseLabel = (value) => {
+    if (!value || typeof value !== 'string') return value;
+
+    return value
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
   const submitFeedback = async (responseId, feedbackType) => {
     if (!selectedTicketId) return;
     setFeedbackLoading(true);
@@ -198,17 +208,19 @@ export default function TicketQueue() {
           </div>
 
           <div className="queue-hero-metrics">
-            <div className="queue-mini-stat">
+            <div className="queue-mini-stat queue-mini-stat-open">
               <span className="queue-mini-label">Open</span>
               <strong>{openTickets}</strong>
             </div>
-            <div className="queue-mini-stat">
+            <div className="queue-mini-stat queue-mini-stat-resolved">
               <span className="queue-mini-label">Resolved</span>
               <strong>{resolvedTickets}</strong>
             </div>
-            <div className="queue-mini-stat">
-              <span className="queue-mini-label">Live feed</span>
-              <strong>{wsClientId ? 'Connected' : 'Waiting'}</strong>
+            <div className="queue-hero-status">
+              <div className="app-status-pill">
+                <span className={`status-dot ${wsClientId ? 'status-connected' : 'status-connecting'}`} />
+                <span className="status-label">{wsClientId ? 'Connected' : 'Waiting'}</span>
+              </div>
             </div>
           </div>
         </header>
@@ -253,8 +265,8 @@ export default function TicketQueue() {
                       >
                         <td>#{ticket.id}</td>
                         <td className="ticket-subject" title={ticket.subject}>{ticket.subject}</td>
-                        <td>{ticket.category || 'Uncategorized'}</td>
-                        <td>{ticket.assigned_team || 'Unassigned'}</td>
+                        <td className="ticket-category">{formatSnakeCaseLabel(ticket.category) || 'Uncategorized'}</td>
+                        <td className="ticket-team">{formatSnakeCaseLabel(ticket.assigned_team) || 'Unassigned'}</td>
                         <td>
                           <span className={`badge ${getPriorityColor(ticket.priority)}`}>
                             {ticket.priority?.toUpperCase() || 'UNKNOWN'}

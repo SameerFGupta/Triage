@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import SubmitTicket from './SubmitTicket'
 import Dashboard from './components/Dashboard'
 import './App.css'
@@ -6,7 +7,7 @@ import TicketQueue from './components/TicketQueue'
 import useWebSocket from './services/useWebSocket'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('Dashboard')
+  const { pathname } = useLocation()
   const [aiProvider, setAiProvider] = useState(localStorage.getItem('aiProvider') || 'anthropic')
 
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -46,6 +47,10 @@ function App() {
         ? 'status-connecting'
         : 'status-disconnected'
 
+  const isDashboardRoute = pathname === '/' || pathname === '/dashboard'
+  const isQueueRoute = pathname === '/queue'
+  const isSubmitRoute = pathname === '/submit'
+
   return (
     <div className="App">
       <div className="app-shell">
@@ -58,24 +63,24 @@ function App() {
           </div>
 
           <div className="app-nav" aria-label="Primary navigation">
-            <button
-              onClick={() => setActiveTab('Submit Ticket')}
-              className={`nav-button ${activeTab === 'Submit Ticket' ? 'active' : ''}`}
+            <Link
+              to="/submit"
+              className={`nav-button ${isSubmitRoute ? 'active' : ''}`}
             >
               Submit Ticket
-            </button>
-            <button
-              onClick={() => setActiveTab('Ticket Queue')}
-              className={`nav-button ${activeTab === 'Ticket Queue' ? 'active' : ''}`}
+            </Link>
+            <Link
+              to="/queue"
+              className={`nav-button ${isQueueRoute ? 'active' : ''}`}
             >
               Ticket Queue
-            </button>
-            <button
-              onClick={() => setActiveTab('Dashboard')}
-              className={`nav-button ${activeTab === 'Dashboard' ? 'active' : ''}`}
+            </Link>
+            <Link
+              to="/dashboard"
+              className={`nav-button ${isDashboardRoute ? 'active' : ''}`}
             >
               Dashboard
-            </button>
+            </Link>
           </div>
 
           <div className="app-provider">
@@ -93,13 +98,32 @@ function App() {
         </nav>
 
         <main className="app-main">
-          {activeTab === 'Submit Ticket' && (
-            <div className="page-frame">
-              <SubmitTicket aiProvider={aiProvider} />
-            </div>
-          )}
-          {activeTab === 'Ticket Queue' && <TicketQueue />}
-          {activeTab === 'Dashboard' && <Dashboard />}
+          <Routes>
+            <Route
+              path="/"
+              element={<Dashboard />}
+            />
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
+            <Route
+              path="/queue"
+              element={<TicketQueue />}
+            />
+            <Route
+              path="/submit"
+              element={(
+                <div className="page-frame">
+                  <SubmitTicket aiProvider={aiProvider} />
+                </div>
+              )}
+            />
+            <Route
+              path="*"
+              element={<Navigate to="/dashboard" replace />}
+            />
+          </Routes>
         </main>
       </div>
     </div>

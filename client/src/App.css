@@ -20,8 +20,8 @@
   padding: 1rem 1.5rem;
   background: rgba(13, 15, 20, 0.75);
   backdrop-filter: blur(28px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 24px rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.34);
 }
 
 .app-status,
@@ -94,6 +94,9 @@
 }
 
 .nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
   color: var(--text);
@@ -104,6 +107,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
+  text-decoration: none;
   transition:
     background-color 160ms ease,
     color 160ms ease,
@@ -230,6 +234,7 @@
 .dashboard-header h2 {
   margin: 0;
   font-family: var(--heading);
+  font-style: italic;
   color: var(--text-h);
   font-size: 1.35rem;
   line-height: 1.1;
@@ -277,6 +282,7 @@
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
+  margin-top: 0;
 }
 
 .button-primary,
@@ -360,9 +366,18 @@
 .metric-card-featured {
   isolation: isolate;
   background:
-    radial-gradient(circle at top right, rgba(79, 110, 247, 0.2), transparent 42%),
-    linear-gradient(180deg, rgba(26, 35, 62, 0.9), rgba(12, 17, 31, 0.78));
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.28), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(79, 110, 247, 0.22), transparent 44%),
+    linear-gradient(180deg, rgba(33, 24, 69, 0.94), rgba(12, 17, 31, 0.84));
   border-color: transparent;
+  box-shadow:
+    0 0 0 1px rgba(79, 110, 247, 0.18),
+    0 0 32px rgba(79, 110, 247, 0.14),
+    0 18px 48px rgba(5, 10, 24, 0.48);
+}
+
+.metric-card-featured::after {
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.28), rgba(79, 110, 247, 0.04) 68%, transparent 72%);
 }
 
 .metric-label {
@@ -436,7 +451,7 @@
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
   gap: 1.25rem;
-  align-items: start;
+  align-items: center;
   height: auto;
   min-height: 290px;
 }
@@ -450,13 +465,18 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: 150px;
   height: 220px;
-  align-self: start;
+  overflow: hidden;
+  align-self: center;
+  justify-self: center;
+  place-self: center;
 }
 
 .team-chart-card .chart-wrap-team {
   grid-template-columns: minmax(180px, 0.85fr) minmax(0, 1.25fr);
-  min-height: 250px;
+  min-height: 220px;
+  align-items: center;
 }
 
 .chart-legend {
@@ -503,6 +523,26 @@
   color: var(--text-soft);
   font-size: 0.88rem;
   font-weight: 700;
+}
+
+.chart-legend-toggle {
+  align-self: flex-start;
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.chart-legend-toggle:hover {
+  color: var(--text-h);
+  transform: translateX(1px);
 }
 
 .dashboard-state {

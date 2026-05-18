@@ -57,6 +57,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isTeamLegendExpanded, setIsTeamLegendExpanded] = useState(false);
 
   useEffect(() => {
     fetch('/api/analytics/summary')
@@ -106,6 +107,14 @@ export default function Dashboard() {
   }));
   const categoryTicks = buildIntegerTicks(Math.max(...categoryChartData.map((entry) => entry.count), 0));
   const totalTeamTickets = teamChartData.reduce((sum, entry) => sum + entry.count, 0) || 1;
+  const teamChartDataWithPercent = teamChartData.map((entry) => ({
+    ...entry,
+    percent: Math.round((entry.count / totalTeamTickets) * 100)
+  }));
+  const visibleTeamLegendItems = isTeamLegendExpanded
+    ? teamChartDataWithPercent
+    : teamChartDataWithPercent.slice(0, 6);
+  const hasHiddenTeams = teamChartDataWithPercent.length > 6;
   const handleExportCSV = async () => {
     try {
       const response = await fetch('/api/analytics/export');
@@ -179,6 +188,12 @@ export default function Dashboard() {
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryChartData} margin={{ top: 8, right: 8, left: -18, bottom: 44 }}>
+                  <defs>
+                    <linearGradient id="ticketsBarGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4f6ef7" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#4f6ef7" stopOpacity={0.4} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(111, 124, 135, 0.18)" vertical={false} />
                   <XAxis dataKey="category" axisLine={false} tickLine={false} interval={0} height={96} tick={<CategoryAxisTick />} />
                   <YAxis
@@ -190,7 +205,7 @@ export default function Dashboard() {
                     ticks={categoryTicks}
                   />
                   <Tooltip formatter={(value) => [value, 'Tickets']} labelFormatter={(label) => label} />
-                  <Bar dataKey="count" fill="#4f6ef7" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="count" fill="url(#ticketsBarGradient)" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -206,12 +221,11 @@ export default function Dashboard() {
             </div>
             <div className="chart-wrap chart-wrap-team">
               <div className="team-chart-panel">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                <PieChart width={150} height={220}>
                     <Pie
-                      data={teamChartData}
-                      innerRadius={42}
-                      outerRadius={62}
+                      data={teamChartDataWithPercent}
+                      innerRadius={44}
+                      outerRadius={72}
                       cx="50%"
                       cy="50%"
                       paddingAngle={3}
@@ -219,18 +233,18 @@ export default function Dashboard() {
                       nameKey="team"
                       isAnimationActive={false}
                     >
-                      {teamChartData.map((entry, index) => (
+                      {teamChartDataWithPercent.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [value, 'Tickets']} />
+                    <Tooltip
+                      formatter={(value, _name, item) => [`${item.payload.percent}%`, item.payload.team]}
+                      labelFormatter={() => ''}
+                    />
                   </PieChart>
-                </ResponsiveContainer>
               </div>
               <ul className="chart-legend" aria-label="Tickets by team legend">
-                {teamChartData.map((entry, index) => {
-                  const percent = Math.round((entry.count / totalTeamTickets) * 100);
-
+                {visibleTeamLegendItems.map((entry, index) => {
                   return (
                     <li key={entry.team} className="chart-legend-item">
                       <span className="chart-legend-label">
@@ -241,11 +255,20 @@ export default function Dashboard() {
                         />
                         {entry.team}
                       </span>
-                      <span className="chart-legend-value">{percent}%</span>
+                      <span className="chart-legend-value">{entry.percent}%</span>
                     </li>
                   );
                 })}
               </ul>
+              {hasHiddenTeams && (
+                <button
+                  type="button"
+                  className="chart-legend-toggle"
+                  onClick={() => setIsTeamLegendExpanded((value) => !value)}
+                >
+                  {isTeamLegendExpanded ? 'Show fewer' : 'Show all'}
+                </button>
+              )}
             </div>
           </article>
 
