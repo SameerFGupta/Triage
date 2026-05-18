@@ -97,8 +97,65 @@ async function generateText({ systemPrompt, userPrompt, maxTokens = 1024 }) {
   }
 }
 
+/**
+ * Generates text using the configured AI provider, streaming chunks via a callback.
+ * @param {Object} params
+ * @param {string} params.systemPrompt
+ * @param {string} params.userPrompt
+ * @param {number} [params.maxTokens=1024]
+ * @param {function} params.onChunk
+ * @returns {Promise<string>}
+ */
+async function generateTextStreaming({ systemPrompt, userPrompt, maxTokens = 1024, onChunk }) {
+  assertProviderConfigured();
+  const provider = getCurrentProvider();
+
+  if (!onChunk) {
+    return generateText({ systemPrompt, userPrompt, maxTokens });
+  }
+
+  if (provider === 'anthropic') {
+    const anthropicClient = getAnthropicClient();
+    let fullText = '';
+    const stream = anthropicClient.messages.stream({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ]
+    }).on('text', (text) => {
+      fullText += text;
+      onChunk(text);
+    });
+
+    await stream.finalMessage();
+    return fullText;
+  } else if (provider === 'gemini') {
+    const geminiClient = getGeminiClient();
+    const result = await geminiClient.generateContentStream({
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        systemInstruction: systemPrompt,
+        generationConfig: {
+            maxOutputTokens: maxTokens,
+        }
+    });
+
+    let fullText = '';
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      fullText += chunkText;
+      onChunk(chunkText);
+    }
+    return fullText;
+  } else {
+    throw new Error(`Unrecognized AI_PROVIDER: ${provider}`);
+  }
+}
+
 module.exports = {
   AIConfigurationError,
   generateText,
+  generateTextStreaming,
   getProviderStatus
 };

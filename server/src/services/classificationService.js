@@ -1,4 +1,4 @@
-const { generateText } = require('./aiProvider');
+const { generateText, generateTextStreaming } = require('./aiProvider');
 
 class AIResponseParseError extends Error {
   constructor(message, rawResponse) {
@@ -91,12 +91,13 @@ function parseClassificationResponse(responseText) {
 }
 
 /**
- * Classifies an IT support ticket using the Anthropic API.
+ * Classifies an IT support ticket using the configured AI API.
  * @param {string} subject - The subject of the ticket.
  * @param {string} body - The main content/body of the ticket.
+ * @param {function} [onChunk] - Optional callback for streaming raw response text chunks.
  * @returns {Promise<Object>} - A promise that resolves to the classification result as a JSON object.
  */
-async function classifyTicket(subject, body) {
+async function classifyTicket(subject, body, onChunk) {
   const prompt = `You are an AI IT helpdesk assistant. Please classify the following support ticket.
 Return ONLY a valid JSON object with the following fields:
 - category: must be one of [password_reset, vpn_issue, hardware_request, software_install, network_outage, security_incident, account_access, data_recovery, onboarding, other]
@@ -118,11 +119,18 @@ Ticket Subject: ${subject}
 Ticket Body: ${body}`;
 
   try {
-    const responseText = await generateText({
-      systemPrompt: "You are a helpful IT helpdesk assistant. Respond only with JSON.",
-      userPrompt: prompt,
-      maxTokens: 1024
-    });
+    const responseText = onChunk
+      ? await generateTextStreaming({
+          systemPrompt: "You are a helpful IT helpdesk assistant. Respond only with JSON.",
+          userPrompt: prompt,
+          maxTokens: 1024,
+          onChunk
+        })
+      : await generateText({
+          systemPrompt: "You are a helpful IT helpdesk assistant. Respond only with JSON.",
+          userPrompt: prompt,
+          maxTokens: 1024
+        });
 
     const classification = parseClassificationResponse(responseText);
 
