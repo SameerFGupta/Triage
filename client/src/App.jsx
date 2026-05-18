@@ -54,7 +54,7 @@ function App() {
             <div className="app-status-pill">
               <span className={`status-dot ${statusClassName}`} />
               <span className="status-label">{status}</span>
-              <span className="status-caption">Realtime triage feed</span>
+              <span className="status-caption">Realtime feed</span>
             </div>
           </div>
 
