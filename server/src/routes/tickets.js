@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db/db');
 const classificationService = require('../services/classificationService');
 const resolutionService = require('../services/resolutionService');
+const wsService = require('../services/wsService');
 const slaService = require('../services/slaService');
 const { AIConfigurationError } = require('../services/aiProvider');
 const { AIResponseParseError } = require('../services/classificationService');
@@ -79,6 +80,9 @@ router.post('/', async (req, res, next) => {
     // Fetch the inserted ticket to pass to resolution
     let ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
 
+    wsService.broadcast('ticket:created', ticket);
+    wsService.broadcast('ticket:classified', ticket);
+
     // 5. Attempt Auto-Resolution
     if (initialStatus !== 'needs_human_review') {
       const resolution = await resolutionService.resolveTicket(ticket);
@@ -109,6 +113,8 @@ router.post('/', async (req, res, next) => {
 
         // Refetch ticket since it updated
         ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
+
+        wsService.broadcast('ticket:auto_resolved', ticket);
       }
     }
 
@@ -220,6 +226,9 @@ router.patch('/:id/feedback', (req, res, next) => {
       payload: JSON.stringify({ responseId, feedback })
     });
 
+    const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(id);
+    wsService.broadcast('ticket:feedback', ticket);
+
     res.json({ message: 'Feedback recorded successfully' });
   } catch (err) {
     next(err);
@@ -258,6 +267,8 @@ router.patch('/:id/resolve', (req, res, next) => {
     });
 
     const updatedTicket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(id);
+
+    wsService.broadcast('ticket:resolved', updatedTicket);
 
     res.json(updatedTicket);
   } catch (err) {
