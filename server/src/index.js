@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { loadEnv } = require('./config/loadEnv');
 const db = require('./db/db');
+const wsService = require('./services/wsService');
 
 loadEnv();
 
@@ -34,6 +35,8 @@ app.use((err, req, res, next) => {
 const server = app.listen(port, host, () => {
   console.log(`Server listening on http://${host}:${port}`);
 });
+
+wsService.init(server);
 
 server.on('error', (error) => {
   console.error(`Failed to start server on http://${host}:${port}`, error);
