@@ -3,13 +3,12 @@ import { formatDistanceToNow, parseISO, isPast, isBefore } from 'date-fns';
 import { ChevronUp, ChevronDown, CheckCircle, XCircle, Clock, AlertTriangle, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import './TicketQueue.css';
 
-const TICKET_POLL_INTERVAL = 30000;
-
 export default function TicketQueue() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+  const [wsClientId, setWsClientId] = useState(null);
 
   // Side panel state
   const [selectedTicketId, setSelectedTicketId] = useState(null);
@@ -19,8 +18,43 @@ export default function TicketQueue() {
 
   useEffect(() => {
     fetchTickets();
-    const intervalId = setInterval(fetchTickets, TICKET_POLL_INTERVAL);
-    return () => clearInterval(intervalId);
+
+    const ws = new WebSocket('ws://localhost:3000');
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'connection:ack') {
+          setWsClientId(data.payload.clientId);
+        } else if (
+          [
+            'ticket:created',
+            'ticket:classified',
+            'ticket:auto_resolved',
+            'ticket:resolved',
+            'ticket:feedback'
+          ].includes(data.type)
+        ) {
+          const updatedTicket = data.payload;
+          setTickets(prev => {
+            const index = prev.findIndex(t => t.id === updatedTicket.id);
+            if (index !== -1) {
+              const newTickets = [...prev];
+              newTickets[index] = { ...newTickets[index], ...updatedTicket };
+              return newTickets;
+            } else {
+              return [updatedTicket, ...prev];
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
 
   useEffect(() => {
