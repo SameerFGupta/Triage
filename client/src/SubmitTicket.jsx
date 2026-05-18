@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import useWebSocket from './services/useWebSocket';
 
 const SubmitTicket = ({ aiProvider }) => {
   const [email, setEmail] = useState('');
@@ -14,7 +15,11 @@ const SubmitTicket = ({ aiProvider }) => {
   // Streaming states
   const [isClassifying, setIsClassifying] = useState(false);
   const [streamText, setStreamText] = useState('');
-  const [wsClientId, setWsClientId] = useState(null);
+
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.port === '5173' ? 'localhost:3000' : window.location.host;
+  const { status, send, lastMessage } = useWebSocket(`${wsProtocol}//${wsHost}`);
+  const [subscribedTicketId, setSubscribedTicketId] = useState(null);
 
   useEffect(() => {
     fetch('/api/settings/status')
@@ -32,6 +37,55 @@ const SubmitTicket = ({ aiProvider }) => {
         setProviderStatus(null);
       });
   }, [aiProvider]);
+
+  useEffect(() => {
+    if (status === 'connected' && subscribedTicketId) {
+       send({
+         type: 'subscribe:ticket',
+         payload: { ticketId: subscribedTicketId }
+       });
+       setIsClassifying(true);
+       setLoading(false);
+    }
+  }, [status, subscribedTicketId, send]);
+
+  useEffect(() => {
+    if (lastMessage && subscribedTicketId) {
+      try {
+        const data = JSON.parse(lastMessage.data);
+        if (data.type === 'ticket:stream:chunk' && data.payload.ticketId === subscribedTicketId) {
+          setStreamText(prev => prev + data.payload.chunk);
+        } else if (data.type === 'ticket:classified' && data.payload.id === subscribedTicketId) {
+          setResult(data.payload);
+        } else if (data.type === 'ticket:auto_resolved' && data.payload.id === subscribedTicketId) {
+          const resolvedTicket = data.payload;
+
+          (async () => {
+            let autoResText = '';
+            const detailResponse = await fetch(`/api/tickets/${resolvedTicket.id}`);
+            if (detailResponse.ok) {
+              const detail = await detailResponse.json();
+              if (detail.responses && detail.responses.length > 0) {
+                autoResText = detail.responses[detail.responses.length - 1].body;
+              }
+            }
+            setResult(resolvedTicket);
+            setAutoResponse(autoResText);
+            setIsClassifying(false);
+            setSubscribedTicketId(null);
+          })();
+        } else if (data.type === 'stream:end' && data.payload.ticketId === subscribedTicketId) {
+          setTimeout(() => {
+            setIsClassifying(false);
+            setSubscribedTicketId(null);
+          }, 1000);
+        }
+      } catch (e) {
+        console.error("Error parsing websocket message", e);
+      }
+    }
+  }, [lastMessage, subscribedTicketId]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,72 +127,14 @@ const SubmitTicket = ({ aiProvider }) => {
 
       const ticket = await response.json();
 
-      // Set the initial result so if websocket stream fails, we still show the submitted ticket
-      setResult(ticket);
-
-      // Open WebSocket connection to listen for classification stream and completion
-      // Determine the WebSocket URL dynamically based on current protocol and host
-      // If deployed or configured, you might use an env variable instead, but this matches TicketQueue logic.
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? `${window.location.hostname}:3000`
-        : window.location.host;
-      const ws = new WebSocket(`${wsProtocol}//${wsHost}`);
-
-      ws.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === 'connection:ack') {
-            setWsClientId(data.payload.clientId);
-            // Subscribe to this ticket's updates
-            ws.send(JSON.stringify({
-              type: 'subscribe:ticket',
-              payload: { ticketId: ticket.id }
-            }));
-
-            // Set initial stream text state
-            setIsClassifying(true);
-            setLoading(false); // Stop normal loading, show streaming UI
-          } else if (data.type === 'ticket:stream:chunk' && data.payload.ticketId === ticket.id) {
-            setStreamText(prev => prev + data.payload.chunk);
-          } else if (data.type === 'ticket:classified' && data.payload.id === ticket.id) {
-            // Update result but wait for potential auto-resolution before finalizing
-            setResult(data.payload);
-          } else if (data.type === 'ticket:auto_resolved' && data.payload.id === ticket.id) {
-            const resolvedTicket = data.payload;
-
-            let autoResText = '';
-            const detailResponse = await fetch(`/api/tickets/${resolvedTicket.id}`);
-            if (detailResponse.ok) {
-              const detail = await detailResponse.json();
-              if (detail.responses && detail.responses.length > 0) {
-                autoResText = detail.responses[detail.responses.length - 1].body;
-              }
-            }
-
-            setResult(resolvedTicket);
-            setAutoResponse(autoResText);
-            setIsClassifying(false);
-            ws.close();
-          } else if (data.type === 'stream:end' && data.payload.ticketId === ticket.id) {
-            // Give auto-resolve a moment to trigger, if it doesn't, finish
-            setTimeout(() => {
-              setIsClassifying(false);
-              ws.close();
-            }, 1000);
-          }
-        } catch (e) {
-          console.error("Error parsing websocket message", e);
-        }
-      };
-
-      ws.onerror = () => {
-        // Fallback to static result if websocket fails
-        setResult(ticket);
-        setLoading(false);
-        setIsClassifying(false);
-      };
+      // Fallback to static result if websocket is not connected
+      if (status !== 'connected') {
+         setResult(ticket);
+         setLoading(false);
+         setIsClassifying(false);
+      } else {
+         setSubscribedTicketId(ticket.id);
+      }
 
     } catch (err) {
       setError(err.message || 'An error occurred while submitting your ticket.');

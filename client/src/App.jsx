@@ -3,10 +3,15 @@ import SubmitTicket from './SubmitTicket'
 import Dashboard from './components/Dashboard'
 import './App.css'
 import TicketQueue from './components/TicketQueue'
+import useWebSocket from './services/useWebSocket'
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const [aiProvider, setAiProvider] = useState(localStorage.getItem('aiProvider') || 'anthropic')
+
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.port === '5173' ? 'localhost:3000' : window.location.host;
+  const { status } = useWebSocket(`${wsProtocol}//${wsHost}`);
 
   useEffect(() => {
     fetch('/api/settings/provider')
@@ -36,7 +41,18 @@ function App() {
 
   return (
     <>
-      <nav style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
+      <nav style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <div style={{ position: 'absolute', left: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: status === 'connected' ? '#10b981' : status === 'connecting' ? '#f59e0b' : '#ef4444'
+          }} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--text)', textTransform: 'capitalize' }}>
+            {status}
+          </span>
+        </div>
         <div style={{ position: 'absolute', right: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <label htmlFor="provider-select" style={{ fontSize: '0.9rem', color: 'var(--text)' }}>AI Provider:</label>
           <select
