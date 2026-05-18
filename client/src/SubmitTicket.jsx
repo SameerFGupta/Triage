@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import useWebSocket from './services/useWebSocket';
+import './SubmitTicket.css';
 
 const SubmitTicket = ({ aiProvider }) => {
   const [email, setEmail] = useState('');
@@ -11,8 +12,6 @@ const SubmitTicket = ({ aiProvider }) => {
   const [error, setError] = useState('');
   const [configurationHint, setConfigurationHint] = useState('');
   const [providerStatus, setProviderStatus] = useState(null);
-
-  // Streaming states
   const [isClassifying, setIsClassifying] = useState(false);
   const [streamText, setStreamText] = useState('');
 
@@ -40,12 +39,12 @@ const SubmitTicket = ({ aiProvider }) => {
 
   useEffect(() => {
     if (status === 'connected' && subscribedTicketId) {
-       send({
-         type: 'subscribe:ticket',
-         payload: { ticketId: subscribedTicketId }
-       });
-       setIsClassifying(true);
-       setLoading(false);
+      send({
+        type: 'subscribe:ticket',
+        payload: { ticketId: subscribedTicketId }
+      });
+      setIsClassifying(true);
+      setLoading(false);
     }
   }, [status, subscribedTicketId, send]);
 
@@ -54,7 +53,7 @@ const SubmitTicket = ({ aiProvider }) => {
       try {
         const data = JSON.parse(lastMessage.data);
         if (data.type === 'ticket:stream:chunk' && data.payload.ticketId === subscribedTicketId) {
-          setStreamText(prev => prev + data.payload.chunk);
+          setStreamText((prev) => prev + data.payload.chunk);
         } else if (data.type === 'ticket:classified' && data.payload.id === subscribedTicketId) {
           setResult(data.payload);
         } else if (data.type === 'ticket:auto_resolved' && data.payload.id === subscribedTicketId) {
@@ -81,11 +80,10 @@ const SubmitTicket = ({ aiProvider }) => {
           }, 1000);
         }
       } catch (e) {
-        console.error("Error parsing websocket message", e);
+        console.error('Error parsing websocket message', e);
       }
     }
   }, [lastMessage, subscribedTicketId]);
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -127,188 +125,217 @@ const SubmitTicket = ({ aiProvider }) => {
 
       const ticket = await response.json();
 
-      // Fallback to static result if websocket is not connected
       if (status !== 'connected') {
-         setResult(ticket);
-         setLoading(false);
-         setIsClassifying(false);
+        setResult(ticket);
+        setLoading(false);
+        setIsClassifying(false);
       } else {
-         setSubscribedTicketId(ticket.id);
+        setSubscribedTicketId(ticket.id);
       }
-
     } catch (err) {
       setError(err.message || 'An error occurred while submitting your ticket.');
       setLoading(false);
     }
   };
 
-  const priorityColors = {
-    low: 'bg-green-100 text-green-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    high: 'bg-orange-100 text-orange-800',
-    critical: 'bg-red-100 text-red-800'
+  const resetForm = () => {
+    setResult(null);
+    setEmail('');
+    setSubject('');
+    setDescription('');
+    setStreamText('');
+    setAutoResponse('');
+  };
+
+  const priorityTone = {
+    low: 'priority-low',
+    medium: 'priority-medium',
+    high: 'priority-high',
+    critical: 'priority-critical'
   };
 
   if (isClassifying) {
     return (
-      <div className="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md border border-gray-200 text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Analyzing Your Ticket...</h2>
-        <div className="flex justify-center items-center mb-6">
-          <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        </div>
+      <section className="submit-layout">
+        <article className="submit-panel submit-panel-processing">
+          <div className="submit-state-icon submit-spinner" aria-hidden="true" />
+          <div className="submit-state-copy">
+            <div className="eyebrow">Live analysis</div>
+            <h2>Analyzing your ticket</h2>
+            <p>
+              The queue is connected, so you are seeing the classifier stream in real time as the issue is routed.
+            </p>
+          </div>
 
-        <div className="bg-gray-50 border border-gray-200 rounded p-4 text-left min-h-[100px] overflow-auto">
-          <p className="text-gray-700 font-mono text-sm whitespace-pre-wrap">
-            <span className="text-indigo-600 font-semibold mb-2 block">AI is thinking...</span>
-            {streamText || "Connecting to AI..."}
-            <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse"></span>
-          </p>
-        </div>
-      </div>
+          <div className="stream-console">
+            <div className="stream-console-label">AI reasoning stream</div>
+            <pre className="stream-console-body">
+              {streamText || 'Connecting to AI...'}
+              <span className="stream-cursor" />
+            </pre>
+          </div>
+        </article>
+      </section>
     );
   }
 
   if (result && !isClassifying) {
     return (
-      <div className="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md border border-gray-200">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-            </svg>
+      <section className="submit-layout">
+        <article className="submit-panel submit-result-panel">
+          <div className="submit-result-header">
+            <div className="submit-state-icon submit-state-success" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <div className="eyebrow">Ticket submitted</div>
+              <h2>Request captured and analyzed</h2>
+              <p className="submit-result-meta">Ticket ID #{result.id}</p>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">Ticket Submitted & Analyzed</h2>
-          <p className="text-gray-600 mt-2">Ticket ID: #{result.id}</p>
-        </div>
 
-        <div className="bg-gray-50 p-4 rounded-md mb-6 border border-gray-100">
-          <div className="flex flex-wrap gap-2 mb-4">
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              {result.category || 'Uncategorized'}
-            </span>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${priorityColors[result.priority] || 'bg-gray-100 text-gray-800'}`}>
-              Priority: {result.priority || 'Normal'}
+          <div className="submit-result-tags">
+            <span className="submit-chip submit-chip-neutral">{result.category || 'Uncategorized'}</span>
+            <span className={`submit-chip ${priorityTone[result.priority] || 'submit-chip-neutral'}`}>
+              Priority: {result.priority || 'normal'}
             </span>
           </div>
 
           {result.status === 'resolved' ? (
-            <div className="bg-green-50 border border-green-200 p-4 rounded text-left">
-              <h3 className="font-semibold text-green-800 mb-2">Auto-Resolved by AI</h3>
-              <p className="text-green-700">{autoResponse || 'Your issue has been automatically resolved.'}</p>
+            <div className="submit-result-card submit-result-success">
+              <h3>Auto-resolved by AI</h3>
+              <p>{autoResponse || 'Your issue has been automatically resolved.'}</p>
             </div>
           ) : (
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded text-left">
-              <p className="text-blue-800 font-medium">
-                Routed to <span className="font-bold">{result.assigned_team || 'Support'}</span> team.
+            <div className="submit-result-card submit-result-route">
+              <h3>Routed for follow-up</h3>
+              <p>
+                Assigned to <strong>{result.assigned_team || 'Support'}</strong> for human follow-up.
               </p>
-              <p className="text-blue-600 text-sm mt-1">We will be in touch shortly.</p>
+              <p className="submit-muted-copy">The team can pick up the full context without needing the requester to restate the issue.</p>
             </div>
           )}
-        </div>
 
-        <div className="text-center">
-          <button
-            onClick={() => {
-              setResult(null);
-              setEmail('');
-              setSubject('');
-              setDescription('');
-              setStreamText('');
-            }}
-            className="text-indigo-600 hover:text-indigo-800 font-medium"
-          >
+          <button onClick={resetForm} className="button-secondary submit-reset-button">
             Submit another ticket
           </button>
-        </div>
-      </div>
+        </article>
+      </section>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md border border-gray-200 text-left">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Submit a Support Ticket</h2>
+    <section className="submit-layout">
+      <aside className="submit-sidecard">
+        <div className="eyebrow">Intake design</div>
+        <h2>Make the first handoff the cleanest one.</h2>
+        <p>
+          Good support tooling reduces back-and-forth before it starts. Capture the issue clearly, then let routing and urgency happen in the background.
+        </p>
 
-      {providerStatus && !providerStatus.configured && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded relative mb-4" role="status">
-          <span className="block sm:inline">
-            AI classification is currently unavailable because the {providerStatus.provider} provider is not configured.
+        <div className="submit-sidecard-grid">
+          <div className="submit-sidecard-stat">
+            <span className="submit-sidecard-label">Provider</span>
+            <strong>{providerStatus?.provider || aiProvider}</strong>
+          </div>
+          <div className="submit-sidecard-stat">
+            <span className="submit-sidecard-label">Socket</span>
+            <strong>{status}</strong>
+          </div>
+        </div>
+
+        <ul className="submit-sidecard-list">
+          <li>Use a concrete subject line instead of “Help” or “Issue”.</li>
+          <li>Include what changed, who is blocked, and what you already tried.</li>
+          <li>Longer context helps the triage model route with fewer corrections.</li>
+        </ul>
+      </aside>
+
+      <article className="submit-panel">
+        <div className="submit-panel-header">
+          <div>
+            <div className="eyebrow">Support request</div>
+            <h2>Submit a ticket</h2>
+            <p className="submit-panel-copy">
+              Capture enough detail for routing, escalation, and a fast first response.
+            </p>
+          </div>
+          <span className="submit-chip submit-chip-neutral">
+            {providerStatus?.configured ? 'AI ready' : 'Manual fallback available'}
           </span>
-          <span className="block mt-2 text-sm text-amber-700">
-            Add the matching API key in `server/.env` or the project-root `.env`, then restart the server to enable live classification.
-          </span>
         </div>
-      )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <span className="block sm:inline">{error}</span>
-          {configurationHint && (
-            <span className="block mt-2 text-sm text-red-600">{configurationHint}</span>
-          )}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <svg className="animate-spin h-10 w-10 text-indigo-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="text-lg font-medium text-gray-700">Analyzing your ticket...</p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Your Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="you@company.com"
-            />
+        {providerStatus && !providerStatus.configured && (
+          <div className="submit-alert submit-alert-warning" role="status">
+            <strong>AI classification is currently unavailable.</strong>
+            <span>
+              The {providerStatus.provider} provider is not configured. Add the matching API key in `server/.env` or the project-root `.env`, then restart the server to enable live classification.
+            </span>
           </div>
+        )}
 
-          <div>
-            <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-            <input
-              type="text"
-              id="subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Brief description of the issue"
-            />
+        {error && (
+          <div className="submit-alert submit-alert-danger" role="alert">
+            <strong>{error}</strong>
+            {configurationHint && <span>{configurationHint}</span>}
           </div>
+        )}
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              rows="5"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Please provide details about your issue..."
-            ></textarea>
+        {loading ? (
+          <div className="submit-loading">
+            <div className="submit-state-icon submit-spinner" aria-hidden="true" />
+            <p>Submitting ticket and preparing analysis...</p>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="submit-form">
+            <label className="submit-field">
+              <span className="submit-label">Your email</span>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="submit-input"
+                placeholder="you@company.com"
+              />
+            </label>
 
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-          >
-            Submit Ticket
-          </button>
-        </form>
-      )}
-    </div>
+            <label className="submit-field">
+              <span className="submit-label">Subject</span>
+              <input
+                type="text"
+                id="subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                required
+                className="submit-input"
+                placeholder="VPN blocks remote access after password reset"
+              />
+            </label>
+
+            <label className="submit-field">
+              <span className="submit-label">Description</span>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                rows="7"
+                className="submit-input submit-textarea"
+                placeholder="What happened, who is affected, when it started, and any steps already tried..."
+              />
+            </label>
+
+            <button type="submit" className="button-primary submit-submit-button">
+              Submit Ticket
+            </button>
+          </form>
+        )}
+      </article>
+    </section>
   );
 };
 

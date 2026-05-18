@@ -14,7 +14,7 @@ import {
   Line
 } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['#155dfc', '#0f9f8f', '#f59e0b', '#ef7d31', '#7c6ee6', '#6abf85'];
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -39,12 +39,28 @@ export default function Dashboard() {
       });
   }, []);
 
-  if (loading) return <div>Loading dashboard...</div>;
-  if (error) return <div>Error loading dashboard: {error}</div>;
+  if (loading) {
+    return (
+      <div className="page-frame">
+        <div className="dashboard-state">Loading dashboard...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-frame">
+        <div className="dashboard-state error">Error loading dashboard: {error}</div>
+      </div>
+    );
+  }
+
   if (!data) return null;
 
   const autoResolvedCount = Math.round(data.resolvedTickets * (data.autoResolutionRate / 100)) || 0;
   const timeSavedMinutes = autoResolvedCount * 8;
+  const timeSavedHours = timeSavedMinutes > 0 ? (timeSavedMinutes / 60).toFixed(1) : '0.0';
+  const providerLabel = data.activeProvider === 'anthropic' ? 'Anthropic' : 'Gemini';
 
   const handleExportCSV = async () => {
     try {
@@ -67,125 +83,139 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', textAlign: 'left' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h2 style={{ margin: 0 }}>Analytics Dashboard</h2>
-          {data.activeProvider && (
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                padding: '4px 8px',
-                borderRadius: '12px',
-                color: 'white',
-                backgroundColor: data.activeProvider === 'anthropic' ? '#8B5CF6' : '#3B82F6', // purple for anthropic, blue for gemini
-              }}
-            >
-              {data.activeProvider === 'anthropic' ? 'Powered by Claude' : 'Powered by Gemini'}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={handleExportCSV}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: 'var(--accent)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          Export CSV
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: 'var(--text)' }}>Total Tickets</h3>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-h)' }}>{data.totalTickets}</div>
-        </div>
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: 'var(--text)' }}>Auto-Resolution Rate</h3>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-h)' }}>{data.autoResolutionRate.toFixed(1)}%</div>
-        </div>
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: 'var(--text)' }}>AI Accuracy</h3>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-h)' }}>{data.aiAccuracyRate.toFixed(1)}%</div>
-        </div>
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: 'var(--text)' }}>SLA Compliance</h3>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-h)' }}>{data.slaComplianceRate.toFixed(1)}%</div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '30px', padding: '20px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
-        <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: 'var(--text-h)' }}>Time Saved Estimate</h3>
-        <div style={{ fontSize: '24px', color: 'var(--accent)', fontWeight: 'bold' }}>
-          {timeSavedMinutes} minutes
-          <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 'normal', marginLeft: '10px' }}>
-            ({autoResolvedCount} auto-resolved tickets × 8 mins)
-          </span>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
-          <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-h)' }}>Tickets by Category</h3>
-          <div style={{ height: '250px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.ticketsByCategory}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="var(--accent)" />
-              </BarChart>
-            </ResponsiveContainer>
+    <div className="page-frame">
+      <section className="dashboard">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <div className="eyebrow">Operations analytics</div>
+            <h2>Support performance, without the noise.</h2>
+            <p className="dashboard-summary">
+              A clear read on incoming volume, resolution quality, and where automation is actually earning back time.
+            </p>
           </div>
-        </div>
 
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)' }}>
-          <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-h)' }}>Tickets by Team</h3>
-          <div style={{ height: '250px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.ticketsByTeam}
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="count"
-                  nameKey="team"
-                  label={({ team, percent }) => `${team} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {data.ticketsByTeam.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="dashboard-toolbar">
+            {data.activeProvider && <span className="provider-chip">AI model: {providerLabel}</span>}
+            <button onClick={handleExportCSV} className="button-secondary">
+              Export CSV
+            </button>
           </div>
-        </div>
+        </header>
 
-        <div style={{ border: '1px solid var(--border)', padding: '20px', borderRadius: '8px', background: 'var(--bg)', gridColumn: '1 / -1' }}>
-          <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-h)' }}>Ticket Volume (Last 7 Days)</h3>
-          <div style={{ height: '200px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.last7Days}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="var(--accent)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
+        <section className="dashboard-overview">
+          <article className="hero-panel">
+            <div className="hero-meta">
+              <span className="stat-dot" />
+              <span className="hero-label">Time saved estimate</span>
+            </div>
+            <p className="hero-value">{timeSavedMinutes}m</p>
+            <p className="hero-footnote">
+              Roughly {timeSavedHours} hours returned through {autoResolvedCount} AI-resolved tickets.
+            </p>
+            <p className="hero-supporting">
+              Estimate uses 8 minutes recovered per auto-resolved request.
+            </p>
+          </article>
+
+          <div className="metric-grid">
+            <article className="metric-card">
+              <span className="metric-label">Total tickets</span>
+              <p className="metric-value">{data.totalTickets}</p>
+              <p className="metric-caption">Current sample in the analytics window.</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Auto-resolution</span>
+              <p className="metric-value">{data.autoResolutionRate.toFixed(1)}%</p>
+              <p className="metric-caption">Tickets closed without a manual handoff.</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">AI accuracy</span>
+              <p className="metric-value">{data.aiAccuracyRate.toFixed(1)}%</p>
+              <p className="metric-caption">Classification decisions matching final outcomes.</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">SLA compliance</span>
+              <p className="metric-value">{data.slaComplianceRate.toFixed(1)}%</p>
+              <p className="metric-caption">Tickets still landing inside service expectations.</p>
+            </article>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section className="dashboard-grid">
+          <article className="chart-card">
+            <div className="chart-card-header">
+              <div>
+                <h3>Tickets by category</h3>
+                <p>Where the incoming workload is clustering right now.</p>
+              </div>
+              <span className="muted-chip">{data.ticketsByCategory.length} categories</span>
+            </div>
+            <div className="chart-wrap">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.ticketsByCategory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(111, 124, 135, 0.18)" vertical={false} />
+                  <XAxis dataKey="category" tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#155dfc" radius={[10, 10, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <article className="chart-card">
+            <div className="chart-card-header">
+              <div>
+                <h3>Tickets by team</h3>
+                <p>Distribution of ownership across operational groups.</p>
+              </div>
+              <span className="muted-chip">{data.ticketsByTeam.length} teams</span>
+            </div>
+            <div className="chart-wrap">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.ticketsByTeam}
+                    innerRadius={66}
+                    outerRadius={96}
+                    paddingAngle={3}
+                    dataKey="count"
+                    nameKey="team"
+                    label={({ team, percent }) => `${team} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {data.ticketsByTeam.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <article className="chart-card wide">
+            <div className="chart-card-header">
+              <div>
+                <h3>Ticket volume over time</h3>
+                <p>A seven-day view of support demand and intake rhythm.</p>
+              </div>
+              <span className="muted-chip">Last 7 days</span>
+            </div>
+            <div className="chart-wrap tall">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.last7Days}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(111, 124, 135, 0.18)" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#6f7c87', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="count" stroke="#155dfc" strokeWidth={3} dot={{ r: 4, fill: '#155dfc' }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+        </section>
+      </section>
     </div>
   );
 }

@@ -9,26 +9,26 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const [aiProvider, setAiProvider] = useState(localStorage.getItem('aiProvider') || 'anthropic')
 
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsHost = window.location.port === '5173' ? 'localhost:3000' : window.location.host;
-  const { status } = useWebSocket(`${wsProtocol}//${wsHost}`);
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsHost = window.location.port === '5173' ? 'localhost:3000' : window.location.host
+  const { status } = useWebSocket(`${wsProtocol}//${wsHost}`)
 
   useEffect(() => {
     fetch('/api/settings/provider')
       .then(res => res.json())
       .then(data => {
         if (data.provider) {
-          setAiProvider(data.provider);
-          localStorage.setItem('aiProvider', data.provider);
+          setAiProvider(data.provider)
+          localStorage.setItem('aiProvider', data.provider)
         }
       })
-      .catch(err => console.error("Failed to fetch provider:", err));
-  }, []);
+      .catch(err => console.error('Failed to fetch provider:', err))
+  }, [])
 
   const handleProviderChange = (e) => {
-    const newProvider = e.target.value;
-    setAiProvider(newProvider);
-    localStorage.setItem('aiProvider', newProvider);
+    const newProvider = e.target.value
+    setAiProvider(newProvider)
+    localStorage.setItem('aiProvider', newProvider)
 
     fetch('/api/settings/provider', {
       method: 'POST',
@@ -36,73 +36,81 @@ function App() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ provider: newProvider }),
-    }).catch(err => console.error("Failed to update provider:", err));
-  };
+    }).catch(err => console.error('Failed to update provider:', err))
+  }
+
+  const statusClassName =
+    status === 'connected'
+      ? 'status-connected'
+      : status === 'connecting'
+        ? 'status-connecting'
+        : 'status-disconnected'
 
   return (
-    <>
-      <nav style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-        <div style={{ position: 'absolute', left: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: status === 'connected' ? '#10b981' : status === 'connecting' ? '#f59e0b' : '#ef4444'
-          }} />
-          <span style={{ fontSize: '0.8rem', color: 'var(--text)', textTransform: 'capitalize' }}>
-            {status}
-          </span>
-        </div>
-        <div style={{ position: 'absolute', right: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label htmlFor="provider-select" style={{ fontSize: '0.9rem', color: 'var(--text)' }}>AI Provider:</label>
-          <select
-            id="provider-select"
-            value={aiProvider}
-            onChange={handleProviderChange}
-            style={{ padding: '5px', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)' }}
-          >
-            <option value="anthropic">Anthropic</option>
-            <option value="gemini">Gemini</option>
-          </select>
-        </div>
-        <button
-          onClick={() => setActiveTab('Submit Ticket')}
-          style={{ background: activeTab === 'Submit Ticket' ? 'var(--accent)' : 'transparent', color: activeTab === 'Submit Ticket' ? 'white' : 'var(--text)', border: '1px solid var(--border)', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Submit Ticket
-        </button>
-        <button
-          onClick={() => setActiveTab('Ticket Queue')}
-          style={{ background: activeTab === 'Ticket Queue' ? 'var(--accent)' : 'transparent', color: activeTab === 'Ticket Queue' ? 'white' : 'var(--text)', border: '1px solid var(--border)', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Ticket Queue
-        </button>
-        <button
-          onClick={() => setActiveTab('Dashboard')}
-          style={{ background: activeTab === 'Dashboard' ? 'var(--accent)' : 'transparent', color: activeTab === 'Dashboard' ? 'white' : 'var(--text)', border: '1px solid var(--border)', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Dashboard
-        </button>
-      </nav>
-
-      <main style={{ padding: '20px' }}>
-        {activeTab === 'Submit Ticket' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">
-                Triage Support
-              </h1>
-              <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 sm:mt-4">
-                How can we help you today?
-              </p>
+    <div className="App">
+      <div className="app-shell">
+        <nav className="app-topbar">
+          <div className="app-status">
+            <div className="app-status-pill">
+              <span className={`status-dot ${statusClassName}`} />
+              <span className="status-label">{status}</span>
+              <span className="status-caption">Realtime triage feed</span>
             </div>
-            <SubmitTicket aiProvider={aiProvider} />
           </div>
-        )}
-        {activeTab === 'Ticket Queue' && <TicketQueue />}
-        {activeTab === 'Dashboard' && <Dashboard />}
-      </main>
-    </>
+
+          <div className="app-nav" aria-label="Primary navigation">
+            <button
+              onClick={() => setActiveTab('Submit Ticket')}
+              className={`nav-button ${activeTab === 'Submit Ticket' ? 'active' : ''}`}
+            >
+              Submit Ticket
+            </button>
+            <button
+              onClick={() => setActiveTab('Ticket Queue')}
+              className={`nav-button ${activeTab === 'Ticket Queue' ? 'active' : ''}`}
+            >
+              Ticket Queue
+            </button>
+            <button
+              onClick={() => setActiveTab('Dashboard')}
+              className={`nav-button ${activeTab === 'Dashboard' ? 'active' : ''}`}
+            >
+              Dashboard
+            </button>
+          </div>
+
+          <div className="app-provider">
+            <label htmlFor="provider-select" className="provider-label">AI Provider</label>
+            <select
+              id="provider-select"
+              value={aiProvider}
+              onChange={handleProviderChange}
+              className="provider-select"
+            >
+              <option value="anthropic">Anthropic</option>
+              <option value="gemini">Gemini</option>
+            </select>
+          </div>
+        </nav>
+
+        <main className="app-main">
+          {activeTab === 'Submit Ticket' && (
+            <div className="page-frame">
+              <section className="page-hero">
+                <div className="page-kicker">Support intake</div>
+                <h1>Triage that feels calm, fast, and accountable.</h1>
+                <p>
+                  Capture the issue once, route it intelligently, and keep the handoff clear for both the requester and the team picking it up.
+                </p>
+              </section>
+              <SubmitTicket aiProvider={aiProvider} />
+            </div>
+          )}
+          {activeTab === 'Ticket Queue' && <TicketQueue />}
+          {activeTab === 'Dashboard' && <Dashboard />}
+        </main>
+      </div>
+    </div>
   )
 }
 
