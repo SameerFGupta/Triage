@@ -17,49 +17,19 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Missing required fields: subject, body, submitter_email' });
     }
 
-    // 1. Classify the ticket
-    const classification = await classificationService.classifyTicket(subject, body);
-
-    // 2. Determine SLA deadline
-    const sla_deadline = slaService.getSlaDeadline(classification.priority, classification.category);
-
-    // 3. Save ticket to DB
+    // 1. Save initial ticket to DB
     const insertTicket = db.prepare(`
       INSERT INTO tickets (
-        subject, body, submitter_email, status, priority, category, assigned_team, sentiment_score, confidence_score, sla_deadline
+        subject, body, submitter_email, status
       ) VALUES (
-        @subject, @body, @submitter_email, @status, @priority, @category, @assigned_team, @sentiment_score, @confidence_score, @sla_deadline
+        @subject, @body, @submitter_email, 'new'
       )
     `);
 
-    // we map classification values and use defaults where missing from classification
-    // classification.sentiment is a string like "frustrated". Our DB takes a REAL sentiment_score.
-    // The previous implementation seeded sentiment_score. We will leave it as null for now or calculate a rough value.
-    let sentimentScore = null;
-    if (classification.sentiment === 'frustrated' || classification.sentiment === 'urgent') sentimentScore = 0.2;
-    else if (classification.sentiment === 'neutral') sentimentScore = 0.5;
-
-    let initialStatus = 'classified';
-    if (classification.status) {
-      initialStatus = classification.status; // might be needs_human_review if confidence is low
-    }
-
-    const info = insertTicket.run({
-      subject,
-      body,
-      submitter_email,
-      status: initialStatus === 'needs_human_review' ? 'new' : initialStatus, // DB ENUM constraints
-      priority: classification.priority,
-      category: classification.category,
-      assigned_team: classification.assigned_team,
-      sentiment_score: sentimentScore,
-      confidence_score: classification.confidence,
-      sla_deadline: sla_deadline.toISOString()
-    });
-
+    const info = insertTicket.run({ subject, body, submitter_email });
     const ticketId = info.lastInsertRowid;
 
-    // 4. Write to audit_log
+    // 2. Write to audit_log for creation
     const insertAudit = db.prepare(`
       INSERT INTO audit_log (ticket_id, event_type, payload)
       VALUES (@ticket_id, @event_type, @payload)
@@ -71,19 +41,67 @@ router.post('/', async (req, res, next) => {
       payload: JSON.stringify({ subject, body, submitter_email })
     });
 
+    let ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
+    wsService.broadcast('ticket:created', ticket);
+
+    // 3. Classify the ticket with streaming
+    wsService.broadcast('stream:start', { ticketId });
+
+    const classification = await classificationService.classifyTicket(subject, body, (chunk) => {
+      wsService.streamToTicketSubscribers(ticketId, chunk);
+    });
+
+    wsService.broadcast('stream:end', { ticketId });
+
+    // 4. Determine SLA deadline
+    const sla_deadline = slaService.getSlaDeadline(classification.priority, classification.category);
+
+    // we map classification values and use defaults where missing from classification
+    let sentimentScore = null;
+    if (classification.sentiment === 'frustrated' || classification.sentiment === 'urgent') sentimentScore = 0.2;
+    else if (classification.sentiment === 'neutral') sentimentScore = 0.5;
+
+    let initialStatus = 'classified';
+    if (classification.status) {
+      initialStatus = classification.status; // might be needs_human_review if confidence is low
+    }
+
+    // 5. Update ticket in DB
+    const updateTicket = db.prepare(`
+      UPDATE tickets
+      SET status = @status,
+          priority = @priority,
+          category = @category,
+          assigned_team = @assigned_team,
+          sentiment_score = @sentiment_score,
+          confidence_score = @confidence_score,
+          sla_deadline = @sla_deadline
+      WHERE id = @id
+    `);
+
+    updateTicket.run({
+      id: ticketId,
+      status: initialStatus === 'needs_human_review' ? 'new' : initialStatus,
+      priority: classification.priority,
+      category: classification.category,
+      assigned_team: classification.assigned_team,
+      sentiment_score: sentimentScore,
+      confidence_score: classification.confidence,
+      sla_deadline: sla_deadline.toISOString()
+    });
+
     insertAudit.run({
       ticket_id: ticketId,
       event_type: 'ticket_classified',
       payload: JSON.stringify(classification)
     });
 
-    // Fetch the inserted ticket to pass to resolution
-    let ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
-
-    wsService.broadcast('ticket:created', ticket);
+    // Refetch the updated ticket
+    ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
     wsService.broadcast('ticket:classified', ticket);
 
-    // 5. Attempt Auto-Resolution
+    // 6. Attempt Auto-Resolution
+
     if (initialStatus !== 'needs_human_review') {
       const resolution = await resolutionService.resolveTicket(ticket);
 
