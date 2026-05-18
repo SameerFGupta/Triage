@@ -3,6 +3,7 @@ const crypto = require('crypto');
 
 let wss = null;
 const clients = new Map();
+const ticketSubscriptions = new Map();
 
 /**
  * Initializes the WebSocket server using the existing HTTP server.
@@ -24,10 +25,35 @@ function init(server) {
     console.log(`WebSocket client connected: ${clientId}`);
 
     // Send the client their ID upon connection
-    ws.send(JSON.stringify({ type: 'connected', payload: { clientId } }));
+    ws.send(JSON.stringify({ type: 'connection:ack', payload: { clientId } }));
+
+    ws.on('message', (message) => {
+      try {
+        const parsed = JSON.parse(message);
+        if (parsed.type === 'subscribe:ticket' && parsed.payload && parsed.payload.ticketId) {
+          const ticketId = parsed.payload.ticketId;
+          if (!ticketSubscriptions.has(ticketId)) {
+            ticketSubscriptions.set(ticketId, new Set());
+          }
+          ticketSubscriptions.get(ticketId).add(ws);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    });
 
     ws.on('close', () => {
       clients.delete(clientId);
+
+      // Remove client from any ticket subscriptions
+      for (const [ticketId, subscribers] of ticketSubscriptions.entries()) {
+        if (subscribers.has(ws)) {
+          subscribers.delete(ws);
+          if (subscribers.size === 0) {
+            ticketSubscriptions.delete(ticketId);
+          }
+        }
+      }
       console.log(`WebSocket client disconnected: ${clientId}`);
     });
 
@@ -70,8 +96,26 @@ function sendToClient(clientId, event, payload) {
   }
 }
 
+/**
+ * Sends a streaming chunk to all clients subscribed to a specific ticket.
+ * @param {string|number} ticketId - The ID of the ticket.
+ * @param {string} chunk - The streaming chunk of text.
+ */
+function streamToTicketSubscribers(ticketId, chunk) {
+  const subscribers = ticketSubscriptions.get(ticketId) || ticketSubscriptions.get(String(ticketId)) || ticketSubscriptions.get(Number(ticketId));
+  if (subscribers) {
+    const message = JSON.stringify({ type: 'ticket:stream:chunk', payload: { ticketId, chunk } });
+    for (const client of subscribers) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    }
+  }
+}
+
 module.exports = {
   init,
   broadcast,
   sendToClient,
+  streamToTicketSubscribers,
 };
